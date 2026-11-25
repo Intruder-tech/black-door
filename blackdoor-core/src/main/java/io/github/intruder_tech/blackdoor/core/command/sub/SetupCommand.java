@@ -76,8 +76,8 @@ public final class SetupCommand implements Subcommand {
                 sender.sendMessage(Text.PREFIX + "&cSetup could not be saved; see the server log.");
                 return;
             }
-            sender.sendMessage(Text.PREFIX + "&aSetup complete. &7Mode stays &f"
-                    + engine.settings().mode().name().toLowerCase(Locale.ROOT) + "&7 until you change it.");
+            sender.sendMessage(Text.PREFIX + "&aSetup complete. &7Protection is &f"
+                    + (engine.settings().mode() == GeneralSettings.Mode.ENFORCE ? "ON" : "OFF (watch only)") + "&7 - you can switch it in the control panel.");
             sender.sendMessage(Text.PREFIX + "&fNext: open the control panel with &e/" + engine.commands().label() + " gui"
                     + (sender.isConsole() ? " &7(in game)" : ""));
             sender.sendMessage("&8   Players need &7blackdoor.command.gui &8to view and &7" + SettingsService.EDIT_PERMISSION

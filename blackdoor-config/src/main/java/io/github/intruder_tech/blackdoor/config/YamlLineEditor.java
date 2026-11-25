@@ -61,18 +61,87 @@ public final class YamlLineEditor {
             lines[i] = m.group(1) + m.group(2) + ": " + value + comment;
             return String.join(newline, lines);
         }
-        if (appendIfTopLevelMissing && !hasTopLevelKey(lines, target[0])) {
-            StringBuilder out = new StringBuilder(String.join(newline, lines));
-            if (out.length() > 0 && !out.toString().endsWith(newline)) {
-                out.append(newline);
-            }
-            for (int depth = 0; depth < target.length; depth++) {
-                out.append("  ".repeat(depth)).append(target[depth]).append(":");
-                out.append(depth == target.length - 1 ? " " + value : "").append(newline);
-            }
-            return out.toString();
+        if (appendIfTopLevelMissing) {
+            return insertMissing(lines, target, value, newline);
         }
         throw new IllegalArgumentException(dottedPath + " not found in file; add it manually or restore the default file");
+    }
+
+    /**
+     * Inserts the missing part of {@code target} at the end of the deepest existing ancestor
+     * section (or at the end of the document when even the top-level key is absent). Used when a
+     * newer version adds a key that older files do not have yet.
+     */
+    private static String insertMissing(String[] lines, String[] target, String value, String newline) {
+        int anchorLine = -1;
+        int anchorIndent = -1;
+        int anchorDepth = 0;
+        List<Integer> stackIndent = new ArrayList<>();
+        List<String> stackKeys = new ArrayList<>();
+        for (int i = 0; i < lines.length; i++) {
+            Matcher m = KEY_LINE.matcher(lines[i]);
+            if (!m.matches()) {
+                continue;
+            }
+            int indent = m.group(1).length();
+            while (!stackIndent.isEmpty() && stackIndent.get(stackIndent.size() - 1) >= indent) {
+                stackIndent.remove(stackIndent.size() - 1);
+                stackKeys.remove(stackKeys.size() - 1);
+            }
+            stackIndent.add(indent);
+            stackKeys.add(m.group(2));
+            if (stackKeys.size() < target.length && isPrefix(stackKeys, target) && stackKeys.size() > anchorDepth) {
+                String rest = m.group(3);
+                int commentAt = commentStart(rest);
+                String valuePart = commentAt < 0 ? rest : rest.substring(0, commentAt);
+                if (!valuePart.isBlank()) {
+                    throw new IllegalArgumentException(String.join(".", stackKeys) + " is a value, not a section");
+                }
+                anchorLine = i;
+                anchorIndent = indent;
+                anchorDepth = stackKeys.size();
+            }
+        }
+        List<String> out = new ArrayList<>(List.of(lines));
+        int insertAt;
+        int baseIndent;
+        if (anchorLine < 0) {
+            while (!out.isEmpty() && out.get(out.size() - 1).isEmpty()) {
+                out.remove(out.size() - 1);
+            }
+            insertAt = out.size();
+            baseIndent = 0;
+        } else {
+            insertAt = lines.length;
+            for (int i = anchorLine + 1; i < lines.length; i++) {
+                Matcher m = KEY_LINE.matcher(lines[i]);
+                if (m.matches() && m.group(1).length() <= anchorIndent) {
+                    insertAt = i;
+                    break;
+                }
+            }
+            while (insertAt > anchorLine + 1 && lines[insertAt - 1].isBlank()) {
+                insertAt--;
+            }
+            baseIndent = anchorIndent + 2;
+        }
+        List<String> added = new ArrayList<>();
+        for (int depth = anchorDepth; depth < target.length; depth++) {
+            String indent = " ".repeat(baseIndent + 2 * (depth - anchorDepth));
+            added.add(indent + target[depth] + ":" + (depth == target.length - 1 ? " " + value : ""));
+        }
+        out.addAll(insertAt, added);
+        String joined = String.join(newline, out);
+        return anchorLine < 0 ? joined + newline : joined;
+    }
+
+    private static boolean isPrefix(List<String> keys, String[] target) {
+        for (int i = 0; i < keys.size(); i++) {
+            if (!keys.get(i).equals(target[i])) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private static boolean hasTopLevelKey(String[] lines, String key) {

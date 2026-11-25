@@ -59,6 +59,17 @@ final class PacketTranslator {
             return new ServerboundPacket.InteractEntity(new WrapperPlayClientAttack(event).getEntityId(),
                     ServerboundPacket.InteractEntity.Action.ATTACK);
         }
+        if (type == PacketType.Play.Client.PONG) {
+            return new ServerboundPacket.TransactionResponse(
+                    new com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientPong(event).getId(), false);
+        }
+        if (type == PacketType.Play.Client.WINDOW_CONFIRMATION) {
+            var w = new com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientWindowConfirmation(event);
+            if (w.getWindowId() == 0) {
+                return new ServerboundPacket.TransactionResponse(w.getActionId(), true);
+            }
+            return new ServerboundPacket.Other("window_confirmation");
+        }
         if (type == PacketType.Play.Client.ANIMATION) {
             return new ServerboundPacket.ArmSwing();
         }

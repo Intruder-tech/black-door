@@ -12,6 +12,7 @@ public enum PacketCheck {
     SELF_INTERACT(Confidence.DETERMINISTIC, "Attacking or interacting with your own entity"),
     TELEPORT_CONFIRM(Confidence.DETERMINISTIC, "Confirming a teleport the server never sent"),
     OVERSIZED(Confidence.DETERMINISTIC, "Packet or text larger than any legitimate client sends"),
+    TRANSACTION(Confidence.DETERMINISTIC, "Reply to a connection check that was never sent, or replies out of order"),
     FLOOD(Confidence.HEURISTIC, "Packet rate above configured limits");
 
     private final Confidence confidence;

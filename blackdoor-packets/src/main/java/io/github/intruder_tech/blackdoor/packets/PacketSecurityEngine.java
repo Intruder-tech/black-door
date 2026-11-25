@@ -13,6 +13,7 @@ import io.github.intruder_tech.blackdoor.state.AttachmentKey;
 import io.github.intruder_tech.blackdoor.state.PendingTeleports;
 import io.github.intruder_tech.blackdoor.state.PlayerSession;
 import io.github.intruder_tech.blackdoor.state.SessionRegistry;
+import io.github.intruder_tech.blackdoor.state.TransactionTracker;
 import io.github.intruder_tech.blackdoor.violations.Finding;
 import io.github.intruder_tech.blackdoor.violations.FindingSink;
 import io.github.intruder_tech.blackdoor.violations.Subject;
@@ -51,10 +52,21 @@ public final class PacketSecurityEngine implements PacketHandler {
     private final LongAdder dropped = new LongAdder();
     private final LongAdder errors = new LongAdder();
     private final LatencyHistogram latency = new LatencyHistogram();
+    private final LongAdder transactionsSent = new LongAdder();
+    private final LongAdder consumedTransactions = new LongAdder();
+    private final boolean legacyTransactions;
 
     public PacketSecurityEngine(SessionRegistry sessions, FindingSink sink, TimeSource time,
                                 Supplier<PacketSettings> settings, BooleanSupplier enforcementAllowed,
                                 MinecraftVersion serverVersion, RateLimitedLogger errorLog) {
+        this(sessions, sink, time, settings, enforcementAllowed, serverVersion, errorLog, false);
+    }
+
+    public PacketSecurityEngine(SessionRegistry sessions, FindingSink sink, TimeSource time,
+                                Supplier<PacketSettings> settings, BooleanSupplier enforcementAllowed,
+                                MinecraftVersion serverVersion, RateLimitedLogger errorLog,
+                                boolean legacyTransactions) {
+        this.legacyTransactions = legacyTransactions;
         this.sessions = Objects.requireNonNull(sessions, "sessions");
         this.sink = Objects.requireNonNull(sink, "sink");
         this.time = Objects.requireNonNull(time, "time");
@@ -78,6 +90,9 @@ public final class PacketSecurityEngine implements PacketHandler {
             PlayerSession session = found.get();
             session.countInbound();
             PacketSettings cfg = settings.get();
+            if (packet instanceof ServerboundPacket.TransactionResponse response) {
+                return transactionResponse(session, cfg, response, start);
+            }
             boolean drop = inspect(session, cfg, wireSize, packet, start);
             if (drop) {
                 dropped.increment();
@@ -177,6 +192,49 @@ public final class PacketSecurityEngine implements PacketHandler {
         return false;
     }
 
+    /**
+     * Replies to Black Door's own transactions are always consumed (the server never sent them, so
+     * it must not see the replies). Replies to other plugins' pings pass untouched.
+     */
+    private PacketVerdict transactionResponse(PlayerSession session, PacketSettings cfg,
+                                              ServerboundPacket.TransactionResponse response, long now) {
+        TransactionTracker tracker = session.transactions();
+        if (tracker == null || !TransactionTracker.isOurs(response.id(), tracker.legacy())) {
+            return PacketVerdict.PASS;
+        }
+        TransactionTracker.Result result = tracker.acknowledge(response.id(), now);
+        session.velocities().acknowledgedUpTo(tracker.acknowledgedSequence());
+        if (result == TransactionTracker.Result.OUT_OF_ORDER) {
+            report(session, cfg, PacketCheck.TRANSACTION, "reply skipped earlier connection checks");
+        } else if (result == TransactionTracker.Result.UNKNOWN) {
+            report(session, cfg, PacketCheck.TRANSACTION, "reply to a connection check that was never sent");
+        }
+        consumedTransactions.increment();
+        return PacketVerdict.DROP;
+    }
+
+    /**
+     * Sends one transaction to every session that has finished logging in. Called by the heartbeat
+     * thread; {@code sender} performs the network write (thread-safe in Netty).
+     */
+    public void heartbeat(java.util.function.BiPredicate<Object, Integer> sender) {
+        long now = time.nanoTime();
+        sessions.forEach(session -> {
+            if (session.entityId() == -1) {
+                return;
+            }
+            try {
+                TransactionTracker tracker = session.enableTransactions(legacyTransactions);
+                if (sender.test(session.key(), tracker.next(now))) {
+                    transactionsSent.increment();
+                }
+            } catch (RuntimeException e) {
+                errors.increment();
+                errorLog.error("packet-heartbeat", "Transaction heartbeat error", e);
+            }
+        });
+    }
+
     private boolean rate(PlayerSession session, PacketSettings cfg, FloodState flood, FloodState.Category category, long now) {
         if (flood.tryAcquire(category, now)) {
             return false;
@@ -211,10 +269,26 @@ public final class PacketSecurityEngine implements PacketHandler {
             if (found.isEmpty()) {
                 return;
             }
+            PlayerSession session = found.get();
             if (packet instanceof ClientboundPacket.JoinGame j) {
-                found.get().entityId(j.entityId());
+                session.entityId(j.entityId());
             } else if (packet instanceof ClientboundPacket.SyncPosition s) {
-                found.get().teleports().sent(s.teleportId());
+                session.teleports().sent(s.teleportId());
+            } else if (packet instanceof ClientboundPacket.Velocity v) {
+                if (v.entityId() == session.entityId()) {
+                    TransactionTracker tracker = session.transactions();
+                    session.velocities().add(v.x(), v.y(), v.z(), tracker == null ? 0 : tracker.nextSequence());
+                }
+            } else if (packet instanceof ClientboundPacket.EntitySpawn e) {
+                session.entities().spawn(e.entityId(), e.x(), e.y(), e.z());
+            } else if (packet instanceof ClientboundPacket.EntityMove e) {
+                session.entities().move(e.entityId(), e.dx(), e.dy(), e.dz());
+            } else if (packet instanceof ClientboundPacket.EntityTeleport e) {
+                session.entities().teleport(e.entityId(), e.x(), e.y(), e.z());
+            } else if (packet instanceof ClientboundPacket.EntityRemove e) {
+                for (int id : e.entityIds()) {
+                    session.entities().remove(id);
+                }
             }
         } catch (RuntimeException e) {
             errors.increment();
@@ -229,11 +303,12 @@ public final class PacketSecurityEngine implements PacketHandler {
 
     public Stats stats() {
         return new Stats(processed.sum(), dropped.sum(), errors.sum(), sessions.size(), sessions.rejected(),
-                latency.percentileUpperBoundNanos(50), latency.percentileUpperBoundNanos(99));
+                latency.percentileUpperBoundNanos(50), latency.percentileUpperBoundNanos(99),
+                transactionsSent.sum(), consumedTransactions.sum());
     }
 
     /** Engine counters; latencies are log2 bucket upper bounds in nanoseconds. */
     public record Stats(long processed, long dropped, long errors, int sessions, long sessionsRejected,
-                        long p50Nanos, long p99Nanos) {
+                        long p50Nanos, long p99Nanos, long transactionsSent, long transactionsAcknowledged) {
     }
 }

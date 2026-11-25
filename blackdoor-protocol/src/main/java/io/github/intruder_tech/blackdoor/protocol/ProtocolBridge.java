@@ -41,4 +41,22 @@ public interface ProtocolBridge {
     /** Stops packet delivery. Safe to call when nothing is attached. */
     default void detach() {
     }
+
+    /**
+     * True when transactions must use window-confirmation action numbers (short ids, servers
+     * before 1.17) instead of Ping/Pong (int ids).
+     */
+    default boolean usesLegacyTransactions() {
+        return false;
+    }
+
+    /**
+     * Sends a transaction (Ping, or window confirmation on legacy servers) with the given id to the
+     * connection, without passing it through other plugins' packet listeners.
+     *
+     * @return false if it could not be sent
+     */
+    default boolean sendTransaction(Object connectionKey, int id) {
+        return false;
+    }
 }

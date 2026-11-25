@@ -45,8 +45,17 @@ class YamlLineEditorTest {
         String out = YamlLineEditor.setScalar(DOC, "setup.completed", "true", true);
         assertThat(out).startsWith("# header comment").endsWith("setup:\n  completed: true\n");
         assertThat(YamlLoader.parse("t", out).get("setup")).isEqualTo(java.util.Map.of("completed", true));
-        assertThatThrownBy(() -> YamlLineEditor.setScalar(DOC, "packet.missing.mode", "x", true))
-                .as("only whole missing top-level sections are appended").isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void insertsMissingKeyInsideExistingSectionKeepingStructure() throws Exception {
+        String out = YamlLineEditor.setScalar(DOC, "packet.transaction.mode", "monitor", true);
+        assertThat(out).contains("      burst: 200\n  transaction:\n    mode: monitor\nmode: monitor");
+        Object packet = YamlLoader.parse("t", out).get("packet");
+        assertThat(((java.util.Map<?, ?>) packet).get("transaction")).isEqualTo(java.util.Map.of("mode", "monitor"));
+        assertThat(YamlLoader.parse("t", out).get("mode")).isEqualTo("monitor");
+        assertThatThrownBy(() -> YamlLineEditor.setScalar(DOC, "mode.sub", "x", true))
+                .as("cannot nest under a scalar").isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test

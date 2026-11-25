@@ -68,6 +68,10 @@ public final class BlackDoorEngine {
     private volatile SessionRegistry sessions;
     private volatile PacketSecurityEngine packetEngine;
     private volatile boolean packetLayerAttached;
+    private volatile java.util.concurrent.ScheduledExecutorService heartbeat;
+
+    /** How often Black Door pings each player for latency and acknowledgement tracking. */
+    static final long TRANSACTION_INTERVAL_MS = 50;
 
     public BlackDoorEngine(Platform platform, TimeSource time) {
         this.platform = Objects.requireNonNull(platform, "platform");
@@ -176,11 +180,27 @@ public final class BlackDoorEngine {
                 () -> config.current().get(CoreConfig.CHECKS),
                 () -> settings().mode() == GeneralSettings.Mode.ENFORCE,
                 platform.info().minecraft().orElse(null),
-                new RateLimitedLogger(logger, time, 3, 0.1, 16));
+                new RateLimitedLogger(logger, time, 3, 0.1, 16),
+                platform.protocol().usesLegacyTransactions());
         packetLayerAttached = platform.protocol().attach(packetEngine);
         if (!packetLayerAttached) {
             logger.error("Could not attach to " + platform.protocol().name() + "; packet checks are inactive.");
+            return;
         }
+        PacketSecurityEngine engineRef = packetEngine;
+        io.github.intruder_tech.blackdoor.protocol.ProtocolBridge protocol = platform.protocol();
+        heartbeat = java.util.concurrent.Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread t = new Thread(r, BoundedExecutor.THREAD_PREFIX + "transactions");
+            t.setDaemon(true);
+            return t;
+        });
+        heartbeat.scheduleAtFixedRate(() -> {
+            try {
+                engineRef.heartbeat(protocol::sendTransaction);
+            } catch (RuntimeException e) {
+                logger.error("Transaction heartbeat failed", e);
+            }
+        }, TRANSACTION_INTERVAL_MS, TRANSACTION_INTERVAL_MS, java.util.concurrent.TimeUnit.MILLISECONDS);
     }
 
     /**
@@ -253,6 +273,18 @@ public final class BlackDoorEngine {
             platform.menus().ifPresent(io.github.intruder_tech.blackdoor.core.menu.MenuPresenter::closeAll);
         } catch (RuntimeException e) {
             logger.error("Failed to close open menus", e);
+        }
+        java.util.concurrent.ScheduledExecutorService beat = heartbeat;
+        if (beat != null) {
+            beat.shutdownNow();
+            try {
+                if (!beat.awaitTermination(SHUTDOWN_TIMEOUT.toMillis(), java.util.concurrent.TimeUnit.MILLISECONDS)) {
+                    logger.warn("Transaction heartbeat did not stop in time.");
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            heartbeat = null;
         }
         try {
             platform.protocol().detach();

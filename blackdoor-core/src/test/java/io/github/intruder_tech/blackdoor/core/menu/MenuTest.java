@@ -81,7 +81,7 @@ class MenuTest {
     void mainMenuShowsRealTogglesAndLockedFutureFeatures() {
         FakeSession s = new FakeSession(RecordingSender.admin(), engine.menus().main());
         assertThat(s.shown.title()).isEqualTo("Black Door");
-        assertThat(s.shown.itemAt(10).orElseThrow().name()).contains("MONITOR");
+        assertThat(s.shown.itemAt(10).orElseThrow().name()).contains("Protection").contains("OFF");
         assertThat(s.shown.items()).filteredOn(i -> i.icon() == Icon.LOCKED)
                 .allSatisfy(i -> assertThat(i.action()).isNull())
                 .anySatisfy(i -> assertThat(i.name()).contains("X-Ray"));
@@ -93,10 +93,10 @@ class MenuTest {
         RecordingSender admin = RecordingSender.admin();
         FakeSession s = new FakeSession(admin, engine.menus().main());
         s.click(12);
-        assertThat(s.shown.title()).isEqualTo("Black Door - Packet checks");
-        assertThat(s.shown.items()).hasSize(PacketCheck.values().length + 1);
+        assertThat(s.shown.title()).isEqualTo("Black Door - Cheat checks");
+        assertThat(s.shown.items()).hasSize(PacketCheck.values().length + 2);
         s.click(10);
-        AwaitMessages.await(admin, m -> m.contains("set to"));
+        AwaitMessages.await(admin, m -> m.contains("is now Block"));
         assertThat(engine.packetSettings().mode(PacketCheck.values()[0])).isEqualTo(CheckMode.MITIGATE);
         long deadline = System.nanoTime() + 5_000_000_000L;
         while (s.refreshes.get() == 0 && System.nanoTime() < deadline) {
@@ -111,7 +111,7 @@ class MenuTest {
         RecordingSender viewer = new RecordingSender("Mod", Set.of("blackdoor.command.gui"));
         FakeSession s = new FakeSession(viewer, engine.menus().packetChecks());
         s.click(10);
-        assertThat(viewer.all()).contains("view but not change");
+        assertThat(viewer.all()).contains("not allowed to change settings");
         assertThat(engine.packetSettings().mode(PacketCheck.values()[0])).isEqualTo(CheckMode.MONITOR);
     }
 
@@ -120,7 +120,7 @@ class MenuTest {
         RecordingSender admin = RecordingSender.admin();
         FakeSession s = new FakeSession(admin, engine.menus().main());
         s.click(10);
-        AwaitMessages.await(admin, m -> m.contains("Global mode set to"));
+        AwaitMessages.await(admin, m -> m.contains("Protection is now ON"));
         assertThat(engine.settings().mode().name()).isEqualTo("ENFORCE");
     }
 

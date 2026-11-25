@@ -36,6 +36,27 @@ public final class Text {
         return out.toString();
     }
 
+    /** Visual markers used in chat output (all render on 1.8 through current clients). */
+    public static final String BULLET = String.valueOf((char) 0x2022);
+    public static final String ARROW = String.valueOf((char) 0x00BB);
+    public static final String CHECK = String.valueOf((char) 0x2714);
+    public static final String CROSS = String.valueOf((char) 0x2716);
+
+    /** A framed title line with strikethrough rules on both sides. */
+    public static String header(String title) {
+        return "&8&m          &r &cBlack Door &8" + ARROW + " &f" + title + " &8&m          ";
+    }
+
+    /** Closing rule matching {@link #header(String)}. */
+    public static String footer() {
+        return "&8&m                                                ";
+    }
+
+    /** One labelled row: grey label, then the value (value may contain its own colours). */
+    public static String row(String label, String value) {
+        return " &8" + ARROW + " &7" + label + ": &f" + value;
+    }
+
     /** Escapes untrusted text so it cannot inject colour codes. */
     public static String escape(String untrusted) {
         return untrusted.replace("&", "&&");

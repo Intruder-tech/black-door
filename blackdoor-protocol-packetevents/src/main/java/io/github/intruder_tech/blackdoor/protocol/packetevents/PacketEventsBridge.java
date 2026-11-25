@@ -108,6 +108,41 @@ public final class PacketEventsBridge implements ProtocolBridge {
         }
     }
 
+    @Override
+    public boolean usesLegacyTransactions() {
+        PacketEventsAPI<?> api = api();
+        try {
+            return api != null && api.getServerManager().getVersion()
+                    .isOlderThan(com.github.retrooper.packetevents.manager.server.ServerVersion.V_1_17);
+        } catch (RuntimeException | LinkageError e) {
+            return false;
+        }
+    }
+
+    /** Sends silently so other plugins' listeners never see Black Door's transactions. */
+    @Override
+    public boolean sendTransaction(Object connectionKey, int id) {
+        PacketEventsAPI<?> api = api();
+        if (api == null) {
+            return false;
+        }
+        try {
+            com.github.retrooper.packetevents.protocol.player.User user = api.getProtocolManager().getUser(connectionKey);
+            if (user == null) {
+                return false;
+            }
+            if (usesLegacyTransactions()) {
+                user.sendPacketSilently(new com.github.retrooper.packetevents.wrapper.play.server
+                        .WrapperPlayServerWindowConfirmation(0, (short) id, false));
+            } else {
+                user.sendPacketSilently(new com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerPing(id));
+            }
+            return true;
+        } catch (RuntimeException | LinkageError e) {
+            return false;
+        }
+    }
+
     /** Packets that failed to translate (and were passed through untouched). */
     public synchronized long translationErrors() {
         return listener == null ? 0 : listener.translationErrors.sum();

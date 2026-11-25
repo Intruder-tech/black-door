@@ -64,6 +64,14 @@ final class BlackDoorPacketListener implements PacketListener {
                     handler.onOutbound(info, new ClientboundPacket.SyncPosition(
                             new WrapperPlayServerPlayerPositionAndLook(event).getTeleportId()));
                 }
+            } else {
+                ClientboundPacket tracked = OutboundTranslator.translate(event);
+                if (tracked != null) {
+                    ConnectionInfo info = info(event.getUser(), event.getChannel());
+                    if (info != null) {
+                        handler.onOutbound(info, tracked);
+                    }
+                }
             }
         } catch (RuntimeException e) {
             translationErrors.increment();

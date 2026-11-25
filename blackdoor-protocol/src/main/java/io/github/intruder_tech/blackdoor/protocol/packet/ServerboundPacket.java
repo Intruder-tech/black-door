@@ -33,6 +33,13 @@ public sealed interface ServerboundPacket {
         public enum Kind { CHAT, COMMAND, TAB_COMPLETE }
     }
 
+    /**
+     * Reply to a server ping (1.17+ Pong) or window confirmation (older). {@code id} is the ping id
+     * or the window-confirmation action number.
+     */
+    record TransactionResponse(int id, boolean legacy) implements ServerboundPacket {
+    }
+
     /** Any other packet; only counted for rate and size. */
     record Other(String typeName) implements ServerboundPacket {
     }

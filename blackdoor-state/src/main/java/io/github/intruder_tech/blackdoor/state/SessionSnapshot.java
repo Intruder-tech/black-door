@@ -8,5 +8,7 @@ import java.util.UUID;
 public record SessionSnapshot(UUID uniqueId, String name, MinecraftVersion clientVersion, int entityId,
                               long ageMillis, long inboundPackets, boolean hasPosition,
                               double x, double y, double z, float yaw, float pitch, boolean onGround,
-                              int pendingTeleports, long teleportOverflow) {
+                              int pendingTeleports, long teleportOverflow,
+                              double rttMillis, double jitterMillis, int outstandingTransactions,
+                              int trackedEntities, int pendingVelocities) {
 }

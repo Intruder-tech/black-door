@@ -21,6 +21,13 @@ public final class PlayerSession {
     private final MovementHistory history = new MovementHistory(HISTORY_CAPACITY);
     private final PendingTeleports teleports = new PendingTeleports(TELEPORT_CAPACITY);
     private final Object[] attachments = new Object[AttachmentKey.MAX_KEYS];
+    private final EntityTracker entities = new EntityTracker(ENTITY_CAPACITY);
+    private final VelocityQueue velocities = new VelocityQueue(VELOCITY_CAPACITY);
+    private volatile TransactionTracker transactions;
+
+    public static final int ENTITY_CAPACITY = 512;
+    public static final int VELOCITY_CAPACITY = 16;
+    public static final int TRANSACTION_CAPACITY = 256;
 
     private volatile UUID uniqueId;
     private volatile String name;
@@ -78,6 +85,27 @@ public final class PlayerSession {
         return teleports;
     }
 
+    public EntityTracker entities() {
+        return entities;
+    }
+
+    public VelocityQueue velocities() {
+        return velocities;
+    }
+
+    /** Transaction tracker, or null until transactions are enabled for this session. */
+    public TransactionTracker transactions() {
+        return transactions;
+    }
+
+    /** Enables transactions once (the id range depends on the server's protocol). */
+    public synchronized TransactionTracker enableTransactions(boolean legacy) {
+        if (transactions == null) {
+            transactions = new TransactionTracker(legacy, TRANSACTION_CAPACITY);
+        }
+        return transactions;
+    }
+
     public void countInbound() {
         inboundPackets++;
     }
@@ -99,6 +127,10 @@ public final class PlayerSession {
                 hasPosition,
                 hasPosition ? history.x(0) : 0, hasPosition ? history.y(0) : 0, hasPosition ? history.z(0) : 0,
                 hasPosition ? history.yaw(0) : 0, hasPosition ? history.pitch(0) : 0,
-                hasPosition && history.onGround(0), teleports.size(), teleports.overflowed());
+                hasPosition && history.onGround(0), teleports.size(), teleports.overflowed(),
+                transactions == null ? -1 : transactions.rttMillis(),
+                transactions == null ? 0 : transactions.jitterMillis(),
+                transactions == null ? 0 : transactions.outstanding(),
+                entities.size(), velocities.pending());
     }
 }

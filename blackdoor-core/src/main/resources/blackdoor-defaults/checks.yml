@@ -32,6 +32,9 @@ packet:
     max-chat-length: 256
     max-command-length: 32767
     max-tab-complete-length: 32500
+  # Replies to Black Door's own connection checks (pings) that were never sent, or come back out of order.
+  transaction:
+    mode: monitor
   # Per-connection packet rates (burst = short-term allowance, per-second = sustained rate).
   # Changes apply to new connections.
   flood:

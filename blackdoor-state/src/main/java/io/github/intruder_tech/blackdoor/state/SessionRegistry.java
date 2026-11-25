@@ -70,6 +70,11 @@ public final class SessionRegistry {
         return Optional.empty();
     }
 
+    /** Visits every live session (used by the transaction heartbeat). Weakly consistent. */
+    public void forEach(java.util.function.Consumer<PlayerSession> action) {
+        sessions.values().forEach(action);
+    }
+
     /** Names of sessions that have completed login, for tab completion. */
     public List<String> names() {
         List<String> names = new ArrayList<>();
