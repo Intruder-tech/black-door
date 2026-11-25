@@ -58,6 +58,11 @@ public final class BlackDoorEngine {
     private final BlackDoor api;
     private final io.github.intruder_tech.blackdoor.core.settings.SettingsService settingsService;
     private final io.github.intruder_tech.blackdoor.core.menu.BlackDoorMenus menus;
+    private final io.github.intruder_tech.blackdoor.core.trace.TraceRecorder traceRecorder;
+
+    public io.github.intruder_tech.blackdoor.core.trace.TraceRecorder traceRecorder() {
+        return traceRecorder;
+    }
 
     private volatile EngineState lifecycle = EngineState.STOPPED;
     private volatile BoundedExecutor workers;
@@ -81,6 +86,7 @@ public final class BlackDoorEngine {
                 BlackDoorEngine.class.getClassLoader(), time);
         String label = platform.info().type().isProxy() ? PROXY_LABEL : BACKEND_LABEL;
         this.settingsService = new io.github.intruder_tech.blackdoor.core.settings.SettingsService(this);
+        this.traceRecorder = new io.github.intruder_tech.blackdoor.core.trace.TraceRecorder(this);
         this.menus = new io.github.intruder_tech.blackdoor.core.menu.BlackDoorMenus(this, settingsService);
         this.commands = new CommandRouter(label, List.of(
                 new HelpCommand(this),
@@ -89,6 +95,7 @@ public final class BlackDoorEngine {
                 new StatusCommand(this),
                 new ChecksCommand(this),
                 new PlayerCommand(this),
+                new io.github.intruder_tech.blackdoor.core.command.sub.RecordCommand(this),
                 new VersionCommand(this),
                 new ReloadCommand(this),
                 new DiagnosticsCommand(this)), logger);
@@ -187,6 +194,7 @@ public final class BlackDoorEngine {
             packetEngine.enableWorldTracking(new io.github.intruder_tech.blackdoor.world.WorldCache(
                     settings().worldMemoryMb() * 1024L * 1024L), shapes);
         }
+        packetEngine.traceListener(traceRecorder);
         packetLayerAttached = platform.protocol().attach(packetEngine);
         if (!packetLayerAttached) {
             logger.error("Could not attach to " + platform.protocol().name() + "; packet checks are inactive.");

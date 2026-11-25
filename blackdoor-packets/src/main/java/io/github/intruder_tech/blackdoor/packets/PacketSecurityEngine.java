@@ -89,6 +89,10 @@ public final class PacketSecurityEngine implements PacketHandler {
             }
             PlayerSession session = found.get();
             session.countInbound();
+            TraceListener trace = traceListener;
+            if (trace != null) {
+                trace.inbound(session, packet, start);
+            }
             PacketSettings cfg = settings.get();
             if (packet instanceof ServerboundPacket.TransactionResponse response) {
                 return transactionResponse(session, cfg, response, start);
@@ -274,6 +278,10 @@ public final class PacketSecurityEngine implements PacketHandler {
                 return;
             }
             PlayerSession session = found.get();
+            TraceListener trace = traceListener;
+            if (trace != null) {
+                trace.outbound(session, packet, time.nanoTime());
+            }
             if (packet instanceof ClientboundPacket.JoinGame j) {
                 session.entityId(j.entityId());
             } else if (packet instanceof ClientboundPacket.SyncPosition s) {
@@ -305,6 +313,10 @@ public final class PacketSecurityEngine implements PacketHandler {
     @Override
     public void onDisconnect(Object connectionKey) {
         sessions.remove(connectionKey).ifPresent(session -> {
+            TraceListener trace = traceListener;
+            if (trace != null) {
+                trace.disconnected(session);
+            }
             io.github.intruder_tech.blackdoor.world.PlayerWorldView view = session.attachment(WORLD, () -> null);
             if (view != null) {
                 view.releaseAll();
@@ -318,6 +330,13 @@ public final class PacketSecurityEngine implements PacketHandler {
 
     private volatile io.github.intruder_tech.blackdoor.world.WorldCache worldCache;
     private volatile io.github.intruder_tech.blackdoor.protocol.world.ShapeRegistry shapeRegistry;
+
+    private volatile TraceListener traceListener;
+
+    /** Installs (or with null removes) the golden-trace recorder hook. */
+    public void traceListener(TraceListener listener) {
+        this.traceListener = listener;
+    }
 
     /** Enables world tracking (ADR-017). Call before attaching to the packet layer. */
     public void enableWorldTracking(io.github.intruder_tech.blackdoor.world.WorldCache cache,

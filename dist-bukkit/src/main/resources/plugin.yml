@@ -44,3 +44,6 @@ permissions:
   blackdoor.command.player:
     description: Inspect a player's tracked state and findings
     default: op
+  blackdoor.command.record:
+    description: Record a player's movement for physics testing (writes files to plugins/BlackDoor/traces)
+    default: op
