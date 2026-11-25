@@ -1,0 +1,30 @@
+# Black Door dependency catalog. Every version here is pinned; see docs/ARCHITECTURAL_REVIEW.md §5.
+[versions]
+# Platform APIs (compileOnly, never shaded)
+spigot-api-legacy = "1.8.8-R0.1-SNAPSHOT"     # lowest Bukkit API we compile against
+paper-api = "1.20.1-R0.1-SNAPSHOT"            # lowest Paper API with region schedulers (Folia-compatible)
+velocity-api = "4.3.1"                        # Java 25 bytecode
+bungeecord-api = "1.21-R0.3"
+packetevents = "2.14.0"                       # GPL-3.0; knows versions up to 26.3
+# Shaded runtime dependencies
+snakeyaml = "2.7"
+# Test
+junit = "6.1.3"
+assertj = "3.27.7"
+# Build plugins
+shadow = "9.6.1"
+
+[libraries]
+spigot-api-legacy = { module = "org.spigotmc:spigot-api", version.ref = "spigot-api-legacy" }
+paper-api = { module = "io.papermc.paper:paper-api", version.ref = "paper-api" }
+velocity-api = { module = "com.velocitypowered:velocity-api", version.ref = "velocity-api" }
+bungeecord-api = { module = "net.md-5:bungeecord-api", version.ref = "bungeecord-api" }
+packetevents-api = { module = "com.github.retrooper:packetevents-api", version.ref = "packetevents" }
+snakeyaml = { module = "org.yaml:snakeyaml", version.ref = "snakeyaml" }
+junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter" }
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
+assertj = { module = "org.assertj:assertj-core", version.ref = "assertj" }
+
+[plugins]
+shadow = { id = "com.gradleup.shadow", version.ref = "shadow" }

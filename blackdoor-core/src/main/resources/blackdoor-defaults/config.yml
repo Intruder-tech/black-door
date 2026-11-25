@@ -1,0 +1,30 @@
+# Black Door - general settings
+# Documentation: docs/CONFIGURATION.md
+#
+# Do not edit config-version; Black Door uses it to migrate this file safely.
+config-version: 1
+
+# Deployment profile: survival, smp, competitive-pvp, minigames, creative, custom, proxy-network
+# (Phase 1: recorded only; profiles take effect once checks exist.)
+profile: survival
+
+# monitor = alerts and logs only (default, recommended for first deployment)
+# enforce = allow configured enforcement actions (no enforcement features exist yet)
+mode: monitor
+
+# Message language. Only en_US is available at the moment.
+language: en_US
+
+# Background workers for blocking work (file I/O, later storage and webhooks).
+# Changing these requires a restart.
+workers:
+  threads: 1
+  queue-capacity: 1024
+
+commands:
+  # Minimum seconds between two /blackdoor reload runs.
+  reload-cooldown-seconds: 5
+
+audit:
+  # Append-only record of administrative actions in plugins/<BlackDoor>/audit/
+  enabled: true

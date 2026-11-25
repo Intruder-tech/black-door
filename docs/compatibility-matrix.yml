@@ -1,0 +1,116 @@
+# Black Door machine-readable compatibility matrix.
+# Source of truth for compatibility claims. CI updates `tested` and `last_verified`.
+# Nothing is supported in Phase 0: every entry is `planned`, `best-effort` target, or `unsupported`.
+schema_version: 1
+generated_for_phase: 1
+last_updated: 2026-11-26
+# Phase 1: every artifact compiles and unit tests pass, but no entry has passed an integration
+# test on a real server/proxy, so no status is `supported` yet.
+build_toolchain: { jdk: 25, default_bytecode: 17, velocity_bytecode: 25 }
+
+statuses: [planned, partial, supported, best-effort, unsupported]
+
+servers:
+  - platform: spigot
+    versions: { min: "1.8.8", max: "latest" }
+    java: { min: 17 }
+    adapter: platform-bukkit
+    status: planned
+    tested: false
+    last_verified: null
+  - platform: bukkit
+    versions: { min: "1.8.8", max: "latest" }
+    java: { min: 17 }
+    adapter: platform-bukkit
+    status: best-effort
+    tested: false
+    last_verified: null
+  - platform: paper
+    versions: { min: "1.8.8", max: "1.19.4" }
+    java: { min: 17 }
+    adapter: platform-bukkit
+    status: planned
+    tested: false
+    last_verified: null
+  - platform: paper
+    versions: { min: "1.20", max: "latest" }
+    java: { min: 17 }
+    adapter: platform-paper
+    status: planned
+    tested: false
+    last_verified: null
+  - platform: purpur
+    versions: { min: "1.20", max: "latest" }
+    java: { min: 17 }
+    adapter: platform-paper
+    status: planned
+    tested: false
+    last_verified: null
+  - platform: folia
+    versions: { min: "1.20", max: "latest" }
+    java: { min: 17 }
+    adapter: platform-paper
+    status: planned
+    tested: false
+    last_verified: null
+  - platform: fabric
+    status: unsupported
+    reason: "Modded server physics invalidate vanilla prediction; out of scope."
+  - platform: forge
+    status: unsupported
+    reason: "Out of scope."
+  - platform: sponge
+    status: unsupported
+    reason: "Out of scope."
+
+proxies:
+  - platform: velocity
+    versions: { min: "4.0", max: "latest" }
+    java: { min: 25 }
+    build: { compiles: true, compiled_against: "velocity-api 4.3.1" }
+    status: planned
+    tested: false
+    last_verified: null
+  - platform: bungeecord
+    versions: { min: "current", max: "latest" }
+    status: planned
+    tested: false
+    last_verified: null
+  - platform: waterfall
+    status: best-effort
+    reason: "End-of-life upstream."
+    tested: false
+    last_verified: null
+
+integrations:
+  - name: viaversion
+    status: planned
+    tested: false
+  - name: viabackwards
+    status: planned
+    tested: false
+  - name: viarewind
+    status: planned
+    tested: false
+  - name: geyser
+    status: planned
+    tested: false
+    notes: "Java movement/combat prediction disabled for Bedrock players by default."
+  - name: floodgate
+    status: planned
+    tested: false
+
+ci_test_versions:   # proposal, pending OD-5
+  - "1.8.8"
+  - "1.12.2"
+  - "1.16.5"
+  - "1.17.1"
+  - "1.18.2"
+  - "1.19.4"
+  - "1.20.1"
+  - "1.20.4"
+  - "1.20.6"
+  - "1.21.1"
+  - "1.21.4"
+  - "latest-1.21.x"
+  - "latest-26.x"

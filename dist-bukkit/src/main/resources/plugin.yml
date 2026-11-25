@@ -1,0 +1,31 @@
+name: BlackDoor
+version: '${version}'
+main: io.github.intruder_tech.blackdoor.platform.bukkit.BlackDoorBukkitPlugin
+# Ignored by 1.8-1.12 servers; required so 1.13+ servers do not load the plugin in legacy mode.
+api-version: '1.13'
+folia-supported: true
+softdepend: [packetevents]
+description: Server-side security framework (Phase 1 foundation build - no protections active yet).
+authors: [Intruder-tech]
+website: https://github.com/Intruder-tech
+commands:
+  blackdoor:
+    description: Black Door administration
+    usage: /blackdoor help
+    aliases: [bd]
+permissions:
+  blackdoor.command.help:
+    description: List Black Door commands
+    default: op
+  blackdoor.command.status:
+    description: View Black Door status
+    default: op
+  blackdoor.command.version:
+    description: View Black Door version information
+    default: op
+  blackdoor.command.reload:
+    description: Reload Black Door configuration
+    default: op
+  blackdoor.command.diagnostics:
+    description: View technical diagnostics
+    default: op

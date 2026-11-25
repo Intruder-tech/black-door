@@ -1,0 +1,69 @@
+# Configuration Architecture
+
+> **Phase:** 0 · **Status:** Design outline. Implementation in Phase 1 (framework) and later
+> phases (per-subsystem keys). Key names below are illustrative, not final.
+
+## 1. Files
+
+| File | Contents |
+|---|---|
+| `config.yml` | `config-version`, active profile, mode (`monitor`/`enforce`), language, general toggles |
+| `checks.yml` | Per-check: enabled, mode, thresholds, weight, decay, mitigations, per-world overrides |
+| `network.yml` | Rate limits, adaptive mode, quarantine, proxy/forwarding expectations, allowlists |
+| `exploits.yml` | Guard toggles and limits, custom-item allowlists |
+| `enforcement.yml` | Policies (thresholds → actions), cooldowns, `allow-permanent-bans: false` |
+| `storage.yml` | Backend, connection (secrets via `${env:VAR}` or `${file:path}`), retention |
+| `integrations.yml` | Via*, Geyser/Floodgate, anti-xray, webhooks, metrics endpoint, edge agent |
+| `messages.yml` | MiniMessage-formatted user/staff messages |
+
+## 2. Mechanics
+
+- **Schema validation:** every file is mapped to typed objects with constraints (ranges, enums,
+  required keys). Errors report file, path and reason.
+- **Versioned migrations:** `config-version` per file; ordered migration steps; backup written
+  before migrating (`<file>.bak-<version>`).
+- **Atomic reload:** parse + validate all files → build immutable config snapshot → swap
+  reference. Any error ⇒ keep previous snapshot, report errors (no partial apply).
+- **Rollback:** last-known-good snapshot retained; `/blackdoor reload` reports diff summary.
+- **Per-world overrides:** `worlds.<name>.checks.<id>`.
+- **Permission exemptions:** `blackdoor.exempt.<check-id>` (see FALSE_POSITIVE_POLICY.md §3).
+- **Environment profiles:** `profile: survival | smp | competitive-pvp | minigames | creative |
+  custom | proxy-network`. A profile is a base layer; files override it.
+- **Safety:** YAML alias/depth/size limits; paths confined to data folder; secrets redacted in
+  diagnostics.
+
+## 2a. Implemented in Phase 1
+
+Only `config.yml` exists so far. The other files are added by the phases that need them.
+
+| Key | Type / range | Default | Effect today |
+|---|---|---|---|
+| `config-version` | integer | `1` | Migration control. Do not edit. |
+| `profile` | `survival` `smp` `competitive-pvp` `minigames` `creative` `custom` `proxy-network` | `survival` | Recorded only. |
+| `mode` | `monitor` / `enforce` | `monitor` | `enforce` logs a warning: no enforcement exists yet. |
+| `language` | `xx_YY` | `en_US` | Only `en_US` exists; other values log a warning. |
+| `workers.threads` | 1–4 | `1` | Background I/O threads (restart required). |
+| `workers.queue-capacity` | 64–65536 | `1024` | Bounded work queue (restart required). |
+| `commands.reload-cooldown-seconds` | 0–3600 | `5` | Minimum time between reloads. |
+| `audit.enabled` | boolean | `true` | Append-only `audit/audit-YYYY-MM.log` (JSON lines, UTC). |
+
+Behavior verified by unit tests:
+- Unknown keys produce warnings (typo detection), not errors.
+- Any invalid value makes the whole reload fail. The previous configuration stays active, or the
+  bundled defaults if no valid file was ever loaded (the plugin is then DEGRADED).
+- A file newer than the build supports is refused, never downgraded.
+- YAML alias bombs, arbitrary-type tags (`!!javax...`), duplicate keys, nesting deeper than 32
+  levels and files over 1 MiB are rejected.
+
+## 3. Profiles (intent)
+
+| Profile | Intent |
+|---|---|
+| survival / smp | Balanced; movement & exploit focus; generous combat tolerances |
+| competitive-pvp | Tighter combat checks; version-specific combat (1.8 vs. modern) |
+| minigames | Teleport/velocity-heavy gameplay tolerances; per-world overrides |
+| creative | Movement checks mostly off; strict creative-item exploit guards |
+| custom | Minimal defaults; operator configures |
+| proxy-network | Network module emphasis; shared-state settings |
+
+All profiles default to **monitor** mode on first install.
