@@ -96,7 +96,9 @@ escalate to staff alert rather than infinite teleporting.
 - Built from outbound chunk data and block updates (what the client actually received).
 - Stores collision-relevant state only (block-state → shape id palette).
 - Bounded per player by a radius budget; outside the radius ⇒ `NO_VERDICT` for movement there.
-- Memory strategy decided by the Phase 2 spike (OD-3). Candidate options:
+- **Decided (ADR-017, measured in BENCHMARK_REPORT.md §1):** shared position-keyed collision
+  cache + per-player overlay of unacknowledged changes + simulation radius (default 3 chunks) +
+  memory budget. The options considered were:
   1. Per-player compact palettes (simplest, highest memory).
   2. Shared immutable section snapshots + per-player overlay of unacknowledged changes.
   3. Hybrid: shared for static regions, per-player near the player.

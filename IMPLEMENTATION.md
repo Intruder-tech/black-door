@@ -6,8 +6,8 @@
 
 **Last updated:** 2026-11-26
 **Current phase:** Phase 2 — Packet inspection, player state, physics
-**Phase status:** **Milestones 2.1 and 2.2 done** (packet security engine, player state, findings ledger, transactions and latency,
-in-game control panel and `/blackdoor setup`). Milestones 2.3 and 2.4 not started (§12).
+**Phase status:** **Milestones 2.1, 2.2 and 2.3 done** (packet security engine, player state, findings ledger, transactions and latency,
+in-game control panel and `/blackdoor setup`). Milestone 2.4 (physics core) not started (§12).
 **Protections active:** 8 packet checks (7 deterministic, 1 heuristic), **monitor mode by default**
 (they log findings; they block only if you set a check to `mitigate` and the global mode to `enforce`).
 **Next gate:** A real player session to exercise packet checks and the GUI (§2, B-4), then milestone 2.2.
@@ -200,6 +200,7 @@ onboarding in §9.
 | 2026-11-26 | 0 | Researched ecosystem state. Wrote all Phase 0 documents and this tracker. | Documents written; `[verify]` facts flagged. | — |
 | 2026-11-26 | 0→1 | Owner approved Phase 0 and resolved OD-1/2/4/5/6. | Recorded in §3. | — |
 | 2026-11-26 | 1 | Installed a portable JDK 21 (checksum verified), initialized git (no commits). Built the Gradle multi-module foundation: 10 code modules + universal Bukkit jar, two proxy jars, config framework, version model, PacketEvents adapter, platform adapters, admin commands, audit log, architecture and source-rule checks, dependency locking, CI workflow, GPL-3.0 license. Updated the docs for ADR-012 to ADR-016. | `./gradlew clean build` green; 96 unit tests pass; negative tests show the guards work; jar contents inspected. | Real-proxy smoke test denied by the permission system (B-1). Server tests need EULA acceptance (B-2). |
+| 2026-11-26 | 2 | Milestone 2.3: world-view memory spike on real 26.3 terrain (609 chunks); OD-3 resolved by ADR-017 (shared position-keyed collision cache, overlay, simulation radius). New never-shipped module `blackdoor-benchmarks`. Found and handled a 26.x save-format change (lowercase `id`/`properties`, string palette entries). | Measured heap per layout, see docs/BENCHMARK_REPORT.md §1. | Nether sample too small (1 chunk); classifier approximate. |
 | 2026-11-26 | 2 | Milestone 2.2 (transactions, latency, entity tracker, velocity queue, `packet.transaction`). Owner feedback: GUI rewritten in plain language (Off / Watch / Block, "Protection ON/OFF", plain check names); `/blackdoor player` redesigned as a framed, colour-coded card (ping green/yellow/red, plain finding names, yaw shown -180..180). YAML editor now inserts keys missing from older files. | 159 unit tests pass; live 26.3 client test clean (see §12). | Owner confirmed menu items cannot be taken (to be reconfirmed: answer was ambiguous). |
 | 2026-11-26 | 2 | Phase 1 approved. Milestone 2.1: packet engine (7 checks), player state, findings ledger, PacketEvents listener, `checks.yml`. Owner added a requirement mid-session (in-game GUI plus one-command setup); delivered `/blackdoor setup`, `/blackdoor gui`, `/blackdoor checks`, `/blackdoor player`, plus comment-preserving in-game config edits. | Build green; 96 → 143 unit tests (all pass); console smoke tests on Paper 26.3, Folia 26.3, Paper 1.8.8, Spigot 26.3. | Needs a real player session (B-4). |
 | 2026-11-26 | 1 | Owner allowed local test servers, accepted the EULA and asked for a push. Smoke-tested 9 configurations (Velocity 4.3.1, BungeeCord, Paper 26.3 / 1.21.11 / 1.20.1 / 1.8.8, Folia 26.3, Spigot 26.3, plus a run without PacketEvents). Fixed legacy PaperSpigot detection. First commit pushed to `github.com/Intruder-tech/black-door`. | §5.1 table; `./gradlew build` green after the fix. | No player connected; Purpur and a Java 17 runtime are untested. |
@@ -236,7 +237,7 @@ onboarding in §9.
 |---|---|---|---|
 | 2.1 | Packet security engine, player state, findings ledger, PacketEvents listener, `checks.yml`; **plus (owner request) `/blackdoor setup` and the in-game GUI** | **Done 2026-11-26** | See §13 |
 | 2.2 | Transaction manager (Ping/Pong and window confirmation), entity tracker, outbound velocity tracking | **Done 2026-11-26** | Heartbeat every 50 ms with reserved ids (ping: `[MIN_INT, MIN_INT+2^24)`, legacy window confirmation: `[-32768, -16385]`); replies to our own pings are consumed; new check `packet.transaction`; entity tracker (cap 512/player); velocity queue tied to acknowledgement. Live test (owner, 26.3 client, ~7 min): 18,036 packets, **ping 2 ms / jitter 1 ms measured**, 125 entities tracked, 0 findings, 0 errors. Missing `transaction` key auto-inserted into an old `checks.yml`. Effect/attribute tracking moved to 2.4 (needed only by physics). Not covered: legacy window-confirmation path with a real 1.8 client; other plugins using overlapping ping ids. |
-| 2.3 | World-view memory spike (OD-3) with measured heap numbers | Not started | Measurements go to docs/BENCHMARK_REPORT.md |
+| 2.3 | World-view memory spike (OD-3) with measured heap numbers | **Done 2026-11-26** | Real 26.3 terrain (609 chunks). Measured per player at view distance 10: block copy 9.99 MiB, collision-shape copy 2.45 MiB, shared cache when players are together 0.08 MiB. Content de-duplication saves only 1%. **Decision (ADR-017):** shared, position-keyed collision cache, per-player overlay, simulation radius 3 chunks (≈0.27 MiB/player worst case), memory budget. Build cost 9.1 µs/section. Full report: docs/BENCHMARK_REPORT.md §1 |
 | 2.4 | Physics core (walk/jump/collide/effects/knockback) for 1.8.8, latest 1.21.x, latest 26.x, plus golden-trace harness | Not started | Blocked on golden traces from real clients (B-5) |
 
 ## 13. Milestone 2.1 — What Was Built and Verified
@@ -292,8 +293,10 @@ mapped like interact-attack.
 
 ## 11. Next Steps
 
-1. B-4: owner joins a local test server, tries `/blackdoor gui`, and plays normally for a few
-   minutes. Expect zero findings.
-2. Milestone 2.2: transaction manager and entity tracker.
-3. Milestone 2.3: world-view memory spike (OD-3).
+1. Milestone 2.4a: implement the world view decided in ADR-017 (shared position-keyed collision
+   cache, overlay, simulation radius, memory budget), fed by chunk and block-change packets, plus
+   a collision-shape registry generated from game data.
+2. Milestone 2.4b: physics core (walk, jump, gravity, friction, collisions, effects, knockback) for
+   1.8.8, latest 1.21.x and latest 26.x. Golden traces from real clients are needed (B-5).
+3. GUI refinements: deferred by the owner until the backend is complete.
 4. CI upkeep: bump GitHub Actions to Node-24 versions; add a CycloneDX SBOM and a Java 17 runtime job.

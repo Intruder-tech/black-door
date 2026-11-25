@@ -59,4 +59,5 @@ include(
     "blackdoor-proxy-velocity",
     "blackdoor-proxy-bungee",
     "dist-bukkit",
+    "blackdoor-benchmarks",
 )

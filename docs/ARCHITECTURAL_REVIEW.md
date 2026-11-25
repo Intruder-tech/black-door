@@ -265,7 +265,15 @@ were not created: each proxy adapter has exactly one artifact, so a separate mod
 **ADR-016 — Proxy command label `blackdoorproxy`.** A proxy intercepts commands before the
 backend sees them, so the proxy must not register `/blackdoor`.
 
-**Decision status (2026-11-26):** ADR-001 to ADR-016 accepted. OD-1, OD-2, OD-4, OD-5 and OD-6
+**ADR-017 — World view: shared, position-keyed collision cache (resolves OD-3).** Measured on
+real 26.3 terrain (BENCHMARK_REPORT.md §1): a per-player block copy costs ~10 MiB/player and a
+per-player collision-shape copy ~2.45 MiB/player at view distance 10, too much at 500 players.
+Content de-duplication saves ~1%, because sharing comes from players viewing the same chunks.
+Design: one collision-shape section per (dimension, chunk, section) shared by all players, a
+per-player overlay of unacknowledged block changes, a bounded simulation radius (default 3
+chunks), reference counting and eviction, and a hard memory budget that degrades to "no verdict".
+
+**Decision status (2026-11-26):** ADR-001 to ADR-017 accepted. OD-1, OD-2, OD-4, OD-5 and OD-6
 were resolved by the owner (§7).
 
 ---
@@ -276,7 +284,7 @@ were resolved by the owner (§7).
 |---|---|---|---|
 | OD-1 | Java 17 minimum runtime (drops Java-8-only 1.8.8 servers) | Accepted (Velocity needs Java 25 — ADR-013) | **Resolved 2026-11-26** |
 | OD-2 | Project license | **GPL-3.0** (LICENSE file added) | **Resolved 2026-11-26** |
-| OD-3 | World replica memory strategy | Decide after Phase 2 spike with measurements | Open (Phase 2) |
+| OD-3 | World replica memory strategy | Shared position-keyed collision cache + per-player overlay + simulation radius (ADR-017; measurements in BENCHMARK_REPORT.md §1) | **Resolved 2026-11-26** |
 | OD-4 | Java package root / Maven group | Group `io.github.intruder-tech`, package `io.github.intruder_tech.blackdoor` (hyphen is illegal in Java package names) | **Resolved 2026-11-26** |
 | OD-5 | Tested version set | Representative subset (1.8.8, 1.12.2, 1.16.5, 1.17.1, 1.18.2, 1.19.4, 1.20.1, 1.20.4, 1.20.6, 1.21.1, 1.21.4, latest 1.21.x, latest 26.x); intermediates "expected, untested" | **Resolved 2026-11-26** |
 | OD-6 | PacketEvents shaded vs. separate plugin | Separate plugin, soft dependency (ADR-014) | **Resolved 2026-11-26** |

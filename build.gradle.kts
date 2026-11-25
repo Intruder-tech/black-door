@@ -22,6 +22,7 @@ val moduleLayers = mapOf(
     "blackdoor-proxy-velocity" to 6,
     "blackdoor-proxy-bungee" to 6,
     "dist-bukkit" to 7,
+    "blackdoor-benchmarks" to 8,
 )
 
 /** Modules allowed to depend on the PacketEvents adapter (ADR-003). */
