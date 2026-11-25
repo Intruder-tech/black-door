@@ -42,6 +42,11 @@ public interface ProtocolBridge {
     default void detach() {
     }
 
+    /** Collision classifier for this server's block states, or null if unavailable. */
+    default io.github.intruder_tech.blackdoor.protocol.world.ShapeRegistry shapeRegistry() {
+        return null;
+    }
+
     /**
      * True when transactions must use window-confirmation action numbers (short ids, servers
      * before 1.17) instead of Ping/Pong (int ids).

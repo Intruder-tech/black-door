@@ -6,6 +6,7 @@ description = "Packet security engine: deterministic validation of inbound packe
 
 dependencies {
     api(project(":blackdoor-state"))
+    api(project(":blackdoor-world"))
     api(project(":blackdoor-violations"))
     api(project(":blackdoor-config"))
     testImplementation(testFixtures(project(":blackdoor-common")))

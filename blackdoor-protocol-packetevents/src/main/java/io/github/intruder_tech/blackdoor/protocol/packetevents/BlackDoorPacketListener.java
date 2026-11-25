@@ -56,7 +56,43 @@ final class BlackDoorPacketListener implements PacketListener {
             if (event.getPacketType() == PacketType.Play.Server.JOIN_GAME) {
                 ConnectionInfo info = info(event.getUser(), event.getChannel());
                 if (info != null) {
-                    handler.onOutbound(info, new ClientboundPacket.JoinGame(new WrapperPlayServerJoinGame(event).getEntityId()));
+                    WrapperPlayServerJoinGame join = new WrapperPlayServerJoinGame(event);
+                    handler.onOutbound(info, new ClientboundPacket.JoinGame(join.getEntityId()));
+                    handler.onOutbound(info, new ClientboundPacket.WorldChange(join.getWorldName()));
+                }
+            } else if (event.getPacketType() == PacketType.Play.Server.RESPAWN) {
+                ConnectionInfo info = info(event.getUser(), event.getChannel());
+                if (info != null) {
+                    handler.onOutbound(info, new ClientboundPacket.WorldChange(
+                            new com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerRespawn(event)
+                                    .getWorldName().orElse(null)));
+                }
+            } else if (event.getPacketType() == PacketType.Play.Server.CHUNK_DATA) {
+                ConnectionInfo info = info(event.getUser(), event.getChannel());
+                var column = new com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerChunkData(event).getColumn();
+                if (info != null && column != null && column.isFullChunk()) {
+                    handler.onOutbound(info, new ClientboundPacket.ChunkData(column.getX(), column.getZ(),
+                            event.getUser().getMinWorldHeight() >> 4, new ColumnBlockSource(column.getChunks())));
+                }
+            } else if (event.getPacketType() == PacketType.Play.Server.UNLOAD_CHUNK) {
+                ConnectionInfo info = info(event.getUser(), event.getChannel());
+                var unload = new com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerUnloadChunk(event);
+                if (info != null) {
+                    handler.onOutbound(info, new ClientboundPacket.ChunkUnload(unload.getChunkX(), unload.getChunkZ()));
+                }
+            } else if (event.getPacketType() == PacketType.Play.Server.BLOCK_CHANGE) {
+                ConnectionInfo info = info(event.getUser(), event.getChannel());
+                var change = new com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerBlockChange(event);
+                if (info != null) {
+                    var p = change.getBlockPosition();
+                    handler.onOutbound(info, new ClientboundPacket.BlockChange(p.getX(), p.getY(), p.getZ(), change.getBlockId()));
+                }
+            } else if (event.getPacketType() == PacketType.Play.Server.MULTI_BLOCK_CHANGE) {
+                ConnectionInfo info = info(event.getUser(), event.getChannel());
+                if (info != null) {
+                    for (var b : new com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerMultiBlockChange(event).getBlocks()) {
+                        handler.onOutbound(info, new ClientboundPacket.BlockChange(b.getX(), b.getY(), b.getZ(), b.getBlockId()));
+                    }
                 }
             } else if (event.getPacketType() == PacketType.Play.Server.PLAYER_POSITION_AND_LOOK) {
                 ConnectionInfo info = info(event.getUser(), event.getChannel());

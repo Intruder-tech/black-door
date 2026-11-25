@@ -32,3 +32,8 @@ audit:
 setup:
   # Set by /blackdoor setup after the initial security check. Do not edit by hand.
   completed: false
+
+performance:
+  # Memory for Black Door's shared copy of the world near players (used by movement checks).
+  # When full, movement checks give "no verdict" for areas that do not fit. Restart required.
+  world-memory-mb: 256

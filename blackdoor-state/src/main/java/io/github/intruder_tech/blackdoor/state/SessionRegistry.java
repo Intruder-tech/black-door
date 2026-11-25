@@ -45,8 +45,21 @@ public final class SessionRegistry {
         return Optional.of(session);
     }
 
-    public void remove(Object connectionKey) {
-        sessions.remove(connectionKey);
+    /** Removes and returns the session for a closed connection. */
+    public Optional<PlayerSession> remove(Object connectionKey) {
+        return Optional.ofNullable(sessions.remove(connectionKey));
+    }
+
+    /** Live session by exact name (case-insensitive) or UUID string; for diagnostics only. */
+    public Optional<PlayerSession> findSession(String nameOrUuid) {
+        String wanted = nameOrUuid.toLowerCase(Locale.ROOT);
+        for (PlayerSession s : sessions.values()) {
+            if ((s.name() != null && s.name().toLowerCase(Locale.ROOT).equals(wanted))
+                    || (s.uniqueId() != null && s.uniqueId().toString().equals(wanted))) {
+                return Optional.of(s);
+            }
+        }
+        return Optional.empty();
     }
 
     public int size() {

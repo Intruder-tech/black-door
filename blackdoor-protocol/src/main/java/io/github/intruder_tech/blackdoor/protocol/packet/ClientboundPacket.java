@@ -27,6 +27,26 @@ public sealed interface ClientboundPacket {
     record EntityTeleport(int entityId, double x, double y, double z) implements ClientboundPacket {
     }
 
+    /**
+     * The client entered a world (login or respawn/dimension change). {@code worldName} is null on
+     * versions that do not send one; chunk data is then kept private to the player.
+     */
+    record WorldChange(String worldName) implements ClientboundPacket {
+    }
+
+    /** A chunk sent to the client. The block view is valid only during the callback. */
+    record ChunkData(int chunkX, int chunkZ, int minSectionY,
+                     io.github.intruder_tech.blackdoor.protocol.world.BlockSource blocks) implements ClientboundPacket {
+    }
+
+    /** The client forgets a chunk. */
+    record ChunkUnload(int chunkX, int chunkZ) implements ClientboundPacket {
+    }
+
+    /** One block changed (multi-block changes arrive as several of these). */
+    record BlockChange(int x, int y, int z, int blockStateId) implements ClientboundPacket {
+    }
+
     /** Entities removed from the client's view. */
     record EntityRemove(int[] entityIds) implements ClientboundPacket {
         public EntityRemove {

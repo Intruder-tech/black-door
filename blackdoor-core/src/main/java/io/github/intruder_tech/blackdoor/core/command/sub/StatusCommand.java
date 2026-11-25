@@ -58,6 +58,12 @@ public final class StatusCommand implements Subcommand {
             var stats = engine.packetEngine().get().stats();
             sender.sendMessage("&8 - &7Packet checks: &aactive &7(" + stats.processed() + " packets inspected, "
                     + engine.ledger().map(l -> l.total()).orElse(0L) + " findings, " + stats.dropped() + " blocked)");
+            engine.packetEngine().get().worldCache().ifPresent(w -> {
+                var ws = w.stats();
+                sender.sendMessage(String.format(java.util.Locale.ROOT,
+                        "&8 - &7World view: &f%d chunks &7(%.1f / %d MiB)%s", ws.chunks(), ws.usedBytes() / 1048576.0,
+                        ws.budgetBytes() / 1048576, ws.refused() > 0 ? " &e" + ws.refused() + " refused (budget full)" : ""));
+            });
             sender.sendMessage("&8 - &7Movement/combat checks: &8planned (Phase 3)");
         } else {
             sender.sendMessage("&8 - &7Protections active: &fnone on this platform yet");

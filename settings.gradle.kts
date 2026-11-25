@@ -52,6 +52,7 @@ include(
     "blackdoor-protocol-packetevents",
     "blackdoor-violations",
     "blackdoor-state",
+    "blackdoor-world",
     "blackdoor-packets",
     "blackdoor-core",
     "blackdoor-platform-bukkit",

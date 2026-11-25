@@ -61,13 +61,22 @@ public final class PlayerCommand implements Subcommand {
                     + Text.escape(args.get(0)) + "&c' is being watched.");
             return;
         }
-        for (String line : render(found.get())) {
+        String world = engine.sessions().flatMap(r -> r.findSession(args.get(0)))
+                .flatMap(session -> engine.packetEngine().flatMap(p -> p.worldView(session)))
+                .map(v -> "&f" + v.loadedChunks() + " &7chunks known &8" + Text.BULLET + " &7block changes pending &f"
+                        + v.pendingChanges())
+                .orElse(null);
+        for (String line : render(found.get(), world)) {
             sender.sendMessage(line);
         }
     }
 
-    /** Builds the card. Package-private for tests. */
     List<String> render(SessionSnapshot s) {
+        return render(s, null);
+    }
+
+    /** Builds the card. Package-private for tests. */
+    List<String> render(SessionSnapshot s, String worldLine) {
         String sep = " &8" + Text.BULLET + " ";
         Map<String, Long> counts = engine.ledger()
                 .map(l -> l.countsForSubject(new Subject(s.uniqueId(), s.name()))).orElse(Map.of());
@@ -86,6 +95,9 @@ public final class PlayerCommand implements Subcommand {
         }
         lines.add(Text.row("Sees", "&f" + s.trackedEntities() + " &7entities" + sep
                 + "&7Knockback waiting &f" + s.pendingVelocities() + sep + "&7Teleports waiting &f" + s.pendingTeleports()));
+        if (worldLine != null) {
+            lines.add(Text.row("World", worldLine));
+        }
         lines.add(Text.row("Traffic", String.format(Locale.ROOT, "&f%,d &7packets checked", s.inboundPackets())
                 + sep + "&7Entity id &8" + s.entityId()));
         if (counts.isEmpty()) {

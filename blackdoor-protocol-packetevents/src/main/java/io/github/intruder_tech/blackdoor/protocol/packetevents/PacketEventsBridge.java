@@ -108,6 +108,13 @@ public final class PacketEventsBridge implements ProtocolBridge {
         }
     }
 
+    private final PacketEventsShapes shapes = new PacketEventsShapes();
+
+    @Override
+    public io.github.intruder_tech.blackdoor.protocol.world.ShapeRegistry shapeRegistry() {
+        return shapes;
+    }
+
     @Override
     public boolean usesLegacyTransactions() {
         PacketEventsAPI<?> api = api();

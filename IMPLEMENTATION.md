@@ -6,8 +6,8 @@
 
 **Last updated:** 2026-11-26
 **Current phase:** Phase 2 — Packet inspection, player state, physics
-**Phase status:** **Milestones 2.1, 2.2 and 2.3 done** (packet security engine, player state, findings ledger, transactions and latency,
-in-game control panel and `/blackdoor setup`). Milestone 2.4 (physics core) not started (§12).
+**Phase status:** **Milestones 2.1, 2.2, 2.3 and 2.4a done** (packet security engine, player state, findings ledger, transactions and latency,
+in-game control panel and `/blackdoor setup`). Milestone 2.4b (physics core) not started (§12).
 **Protections active:** 8 packet checks (7 deterministic, 1 heuristic), **monitor mode by default**
 (they log findings; they block only if you set a check to `mitigate` and the global mode to `enforce`).
 **Next gate:** A real player session to exercise packet checks and the GUI (§2, B-4), then milestone 2.2.
@@ -238,7 +238,8 @@ onboarding in §9.
 | 2.1 | Packet security engine, player state, findings ledger, PacketEvents listener, `checks.yml`; **plus (owner request) `/blackdoor setup` and the in-game GUI** | **Done 2026-11-26** | See §13 |
 | 2.2 | Transaction manager (Ping/Pong and window confirmation), entity tracker, outbound velocity tracking | **Done 2026-11-26** | Heartbeat every 50 ms with reserved ids (ping: `[MIN_INT, MIN_INT+2^24)`, legacy window confirmation: `[-32768, -16385]`); replies to our own pings are consumed; new check `packet.transaction`; entity tracker (cap 512/player); velocity queue tied to acknowledgement. Live test (owner, 26.3 client, ~7 min): 18,036 packets, **ping 2 ms / jitter 1 ms measured**, 125 entities tracked, 0 findings, 0 errors. Missing `transaction` key auto-inserted into an old `checks.yml`. Effect/attribute tracking moved to 2.4 (needed only by physics). Not covered: legacy window-confirmation path with a real 1.8 client; other plugins using overlapping ping ids. |
 | 2.3 | World-view memory spike (OD-3) with measured heap numbers | **Done 2026-11-26** | Real 26.3 terrain (609 chunks). Measured per player at view distance 10: block copy 9.99 MiB, collision-shape copy 2.45 MiB, shared cache when players are together 0.08 MiB. Content de-duplication saves only 1%. **Decision (ADR-017):** shared, position-keyed collision cache, per-player overlay, simulation radius 3 chunks (≈0.27 MiB/player worst case), memory budget. Build cost 9.1 µs/section. Full report: docs/BENCHMARK_REPORT.md §1 |
-| 2.4 | Physics core (walk/jump/collide/effects/knockback) for 1.8.8, latest 1.21.x, latest 26.x, plus golden-trace harness | Not started | Blocked on golden traces from real clients (B-5) |
+| 2.4a | World view (ADR-017): shared position-keyed collision cache, per-player view and pending-change overlay, memory budget, PacketEvents chunk/block-change translation, coarse collision classifier | **Done 2026-11-26 (unit-tested; live check pending)** | New module `blackdoor-world`; classes EMPTY/FULL/PARTIAL/FLUID/SPECIAL (PARTIAL/SPECIAL mean "no verdict" until an exact shape registry exists); 1.8-era servers without world names use private per-player namespaces; budget `performance.world-memory-mb` (default 256) |
+| 2.4b | Physics core (walk/jump/gravity/friction/collisions/effects/knockback) for 1.8.8, latest 1.21.x, latest 26.x, exact shape registry, golden-trace harness | Not started | Needs golden traces from real clients (B-5) |
 
 ## 13. Milestone 2.1 — What Was Built and Verified
 

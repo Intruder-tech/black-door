@@ -15,6 +15,7 @@ val moduleLayers = mapOf(
     "blackdoor-violations" to 2,
     "blackdoor-protocol-packetevents" to 3,
     "blackdoor-state" to 3,
+    "blackdoor-world" to 3,
     "blackdoor-packets" to 4,
     "blackdoor-core" to 5,
     "blackdoor-platform-bukkit" to 6,

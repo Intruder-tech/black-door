@@ -182,6 +182,11 @@ public final class BlackDoorEngine {
                 platform.info().minecraft().orElse(null),
                 new RateLimitedLogger(logger, time, 3, 0.1, 16),
                 platform.protocol().usesLegacyTransactions());
+        io.github.intruder_tech.blackdoor.protocol.world.ShapeRegistry shapes = platform.protocol().shapeRegistry();
+        if (shapes != null) {
+            packetEngine.enableWorldTracking(new io.github.intruder_tech.blackdoor.world.WorldCache(
+                    settings().worldMemoryMb() * 1024L * 1024L), shapes);
+        }
         packetLayerAttached = platform.protocol().attach(packetEngine);
         if (!packetLayerAttached) {
             logger.error("Could not attach to " + platform.protocol().name() + "; packet checks are inactive.");

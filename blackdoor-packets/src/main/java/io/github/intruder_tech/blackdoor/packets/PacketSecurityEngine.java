@@ -204,6 +204,10 @@ public final class PacketSecurityEngine implements PacketHandler {
         }
         TransactionTracker.Result result = tracker.acknowledge(response.id(), now);
         session.velocities().acknowledgedUpTo(tracker.acknowledgedSequence());
+        io.github.intruder_tech.blackdoor.world.PlayerWorldView worldView = session.attachment(WORLD, () -> null);
+        if (worldView != null) {
+            worldView.acknowledged(tracker.acknowledgedSequence());
+        }
         if (result == TransactionTracker.Result.OUT_OF_ORDER) {
             report(session, cfg, PacketCheck.TRANSACTION, "reply skipped earlier connection checks");
         } else if (result == TransactionTracker.Result.UNKNOWN) {
@@ -289,6 +293,8 @@ public final class PacketSecurityEngine implements PacketHandler {
                 for (int id : e.entityIds()) {
                     session.entities().remove(id);
                 }
+            } else {
+                worldEvent(session, packet);
             }
         } catch (RuntimeException e) {
             errors.increment();
@@ -298,7 +304,57 @@ public final class PacketSecurityEngine implements PacketHandler {
 
     @Override
     public void onDisconnect(Object connectionKey) {
-        sessions.remove(connectionKey);
+        sessions.remove(connectionKey).ifPresent(session -> {
+            io.github.intruder_tech.blackdoor.world.PlayerWorldView view = session.attachment(WORLD, () -> null);
+            if (view != null) {
+                view.releaseAll();
+            }
+        });
+    }
+
+    private static final AttachmentKey<io.github.intruder_tech.blackdoor.world.PlayerWorldView> WORLD =
+            AttachmentKey.create("world-view");
+    private static final java.util.concurrent.atomic.AtomicLong PRIVATE_WORLDS = new java.util.concurrent.atomic.AtomicLong();
+
+    private volatile io.github.intruder_tech.blackdoor.world.WorldCache worldCache;
+    private volatile io.github.intruder_tech.blackdoor.protocol.world.ShapeRegistry shapeRegistry;
+
+    /** Enables world tracking (ADR-017). Call before attaching to the packet layer. */
+    public void enableWorldTracking(io.github.intruder_tech.blackdoor.world.WorldCache cache,
+                                    io.github.intruder_tech.blackdoor.protocol.world.ShapeRegistry registry) {
+        this.worldCache = cache;
+        this.shapeRegistry = registry;
+    }
+
+    public java.util.Optional<io.github.intruder_tech.blackdoor.world.WorldCache> worldCache() {
+        return java.util.Optional.ofNullable(worldCache);
+    }
+
+    /** The player's world view, if world tracking is enabled and the player has one. */
+    public java.util.Optional<io.github.intruder_tech.blackdoor.world.PlayerWorldView> worldView(PlayerSession session) {
+        return java.util.Optional.ofNullable(session.attachment(WORLD, () -> null));
+    }
+
+    private io.github.intruder_tech.blackdoor.world.PlayerWorldView view(PlayerSession session) {
+        return session.attachment(WORLD, () -> new io.github.intruder_tech.blackdoor.world.PlayerWorldView(
+                worldCache, "p:" + PRIVATE_WORLDS.incrementAndGet()));
+    }
+
+    private void worldEvent(PlayerSession session, ClientboundPacket packet) {
+        if (worldCache == null || shapeRegistry == null) {
+            return;
+        }
+        if (packet instanceof ClientboundPacket.WorldChange w) {
+            view(session).changeWorld(w.worldName());
+        } else if (packet instanceof ClientboundPacket.ChunkData c) {
+            view(session).chunk(c.chunkX(), c.chunkZ(), c.minSectionY(), c.blocks(), shapeRegistry);
+        } else if (packet instanceof ClientboundPacket.ChunkUnload u) {
+            view(session).unload(u.chunkX(), u.chunkZ());
+        } else if (packet instanceof ClientboundPacket.BlockChange b) {
+            TransactionTracker tracker = session.transactions();
+            view(session).blockChange(b.x(), b.y(), b.z(), shapeRegistry.classify(b.blockStateId()),
+                    tracker == null ? Long.MAX_VALUE : tracker.nextSequence());
+        }
     }
 
     public Stats stats() {
