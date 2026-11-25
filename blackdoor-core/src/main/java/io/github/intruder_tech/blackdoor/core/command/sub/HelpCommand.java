@@ -26,7 +26,7 @@ public final class HelpCommand implements Subcommand {
 
     @Override
     public String description() {
-        return "Lists the commands you can use.";
+        return "This list";
     }
 
     @Override

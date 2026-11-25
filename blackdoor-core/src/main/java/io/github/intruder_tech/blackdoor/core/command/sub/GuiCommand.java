@@ -28,7 +28,7 @@ public final class GuiCommand implements Subcommand {
 
     @Override
     public String description() {
-        return "Opens the in-game control panel.";
+        return "Open the control panel";
     }
 
     @Override

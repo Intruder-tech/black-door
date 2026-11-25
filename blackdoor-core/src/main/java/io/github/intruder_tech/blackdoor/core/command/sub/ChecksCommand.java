@@ -31,7 +31,7 @@ public final class ChecksCommand implements Subcommand {
 
     @Override
     public String description() {
-        return "Lists checks, their modes and finding counts.";
+        return "All checks and their modes";
     }
 
     @Override

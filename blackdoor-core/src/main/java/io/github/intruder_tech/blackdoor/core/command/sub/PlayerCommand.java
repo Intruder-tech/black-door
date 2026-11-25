@@ -41,7 +41,7 @@ public final class PlayerCommand implements Subcommand {
 
     @Override
     public String description() {
-        return "Shows tracked state and findings for a player.";
+        return "Inspect one player";
     }
 
     @Override

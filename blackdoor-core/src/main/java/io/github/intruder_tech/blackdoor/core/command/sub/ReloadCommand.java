@@ -40,7 +40,7 @@ public final class ReloadCommand implements Subcommand {
 
     @Override
     public String description() {
-        return "Reloads configuration (all-or-nothing; invalid files keep the old config).";
+        return "Reload config files safely";
     }
 
     @Override

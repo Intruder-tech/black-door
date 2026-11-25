@@ -80,8 +80,8 @@ class CommandRouterTest {
         router.dispatch(sender, new String[]{"version"});
         router.dispatch(sender, new String[]{"diagnostics"});
         assertThat(sender.all())
-                .contains("Status: &aRUNNING")
-                .contains("Mode: &fmonitor")
+                .contains("Running normally")
+                .contains("OFF &7(watch only)")
                 .contains("0.0.0-test")
                 .contains("Workers:")
                 .contains("config.yml:");

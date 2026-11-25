@@ -88,16 +88,18 @@ public final class CommandRouter {
     }
 
     public void sendHelp(BdSender sender) {
-        sender.sendMessage(Text.PREFIX + "&fCommands:");
+        sender.sendMessage(Text.header("Commands"));
         boolean any = false;
         for (Subcommand sub : subcommands.values()) {
             if (sender.hasPermission(sub.permission())) {
-                sender.sendMessage("&8 - &f/" + label + " " + sub.usage() + " &7" + sub.description());
+                sender.sendMessage(" &8" + Text.ARROW + " &e/" + label + " " + sub.usage() + " &8- &7" + sub.description());
                 any = true;
             }
         }
         if (!any) {
-            sender.sendMessage("&8 - &7(no commands available to you)");
+            sender.sendMessage(" &8" + Text.ARROW + " &7No commands available to you.");
         }
+        sender.sendMessage(" &8Tip: &7/" + label + " gui &8opens the control panel.");
+        sender.sendMessage(Text.footer());
     }
 }

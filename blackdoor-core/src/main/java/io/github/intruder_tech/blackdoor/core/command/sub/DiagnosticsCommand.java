@@ -40,7 +40,7 @@ public final class DiagnosticsCommand implements Subcommand {
 
     @Override
     public String description() {
-        return "Shows JVM, platform, protocol and worker diagnostics.";
+        return "Technical details for admins";
     }
 
     @Override

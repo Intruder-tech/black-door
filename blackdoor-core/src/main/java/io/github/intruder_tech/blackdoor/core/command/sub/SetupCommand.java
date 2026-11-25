@@ -41,7 +41,7 @@ public final class SetupCommand implements Subcommand {
 
     @Override
     public String description() {
-        return "Runs the initial security check and finishes setup.";
+        return "First-time security check";
     }
 
     @Override
