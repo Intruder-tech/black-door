@@ -6,10 +6,11 @@
 
 **Last updated:** 2026-11-26
 **Current phase:** Phase 1 — Foundation
-**Phase status:** **Code complete; smoke-tested on real servers and proxies (§5.1).** Remaining
-gaps: CI has not run on GitHub yet, and no player has connected during tests.
+**Phase status:** **Code complete, smoke-tested on 9 real server/proxy configurations (§5.1),
+CI green on GitHub — awaiting owner approval.** Known gaps: no player connected during tests,
+Purpur and a Java 17 runtime untested, SBOM not added yet.
 **Protections active:** None. Phase 1 contains no security features by design.
-**Next gate:** CI green on GitHub, then the owner approves Phase 1.
+**Next gate:** Owner approves Phase 1, then Phase 2 starts.
 
 ---
 
@@ -35,7 +36,7 @@ Status values: Not started · In progress · In review · Blocked · Done.
 |---|---|---|---|
 | B-1 | Smoke test on real Velocity and BungeeCord | **Resolved 2026-11-26.** Owner allowed local test proxies. | — |
 | B-2 | Smoke test on real Paper / Spigot / Folia | **Resolved 2026-11-26.** Owner allowed local test servers and accepted the Minecraft EULA for them. | — |
-| B-3 | CI on GitHub | **In progress.** The owner asked for a commit to `github.com/Intruder-tech/black-door` (private). | Check the first Actions run after the push. |
+| B-3 | CI on GitHub | **Resolved 2026-11-26.** Pushed to `github.com/Intruder-tech/black-door` (private). Run #2 is green. | — |
 
 ## 3. Decisions (resolved this session)
 
@@ -111,7 +112,8 @@ Still open: OD-3 (world-view memory, Phase 2), OD-7, OD-8, OD-9. See
 | Security-relevant config tests | `YamlLoaderTest`, `ConfigManagerTest` | Alias bomb, `!!javax.script.ScriptEngineManager` gadget, duplicate keys, 100-level nesting, `../` file names: all rejected. |
 | Lifecycle / leaks | `EngineLifecycleTest` | 5 enable/disable cycles leave **0** Black Door threads; API unregistered; scheduler tasks cancelled. |
 | Real server / proxy start | §6.3 runner, localhost only | **Pass on 9 of 9 configurations** (§5.1). |
-| CI on GitHub | — | **Not run yet** (B-3). |
+| CI on GitHub | push to `main` | Run 45692832610 **failed** and exposed two real issues: a thread-exit race in `BoundedExecutor.shutdown` (the leak test saw 1 thread) and a message-ordering race in `ReloadCommandTest`. OSV also flagged old libraries that come only from compile-only platform APIs (Spigot 1.8.8 guava 18 / snakeyaml 1.15 / gson 2.3.1; Paper and proxy APIs). Fixed in `3697b84`; run **45694262245 green** (build + tests + OSV on shipped deps). Shipped jars contain one external library: SnakeYAML 2.7 (verified via `runtimeClasspath`). |
+| Test stability | `./gradlew test --rerun` x8 | 0 failures in 8 runs after the fixes. |
 | Tests on a Java 17 runtime | — | **Not run.** Tests ran on the JDK 25 toolchain; servers ran on Java 21/25. No Java 17 JVM is installed. Planned CI addition. |
 
 ### 5.1 Real-platform smoke tests (2026-11-26)
@@ -197,6 +199,7 @@ onboarding in §9.
 | 2026-11-26 | 0→1 | Owner approved Phase 0 and resolved OD-1/2/4/5/6. | Recorded in §3. | — |
 | 2026-11-26 | 1 | Installed a portable JDK 21 (checksum verified), initialized git (no commits). Built the Gradle multi-module foundation: 10 code modules + universal Bukkit jar, two proxy jars, config framework, version model, PacketEvents adapter, platform adapters, admin commands, audit log, architecture and source-rule checks, dependency locking, CI workflow, GPL-3.0 license. Updated the docs for ADR-012 to ADR-016. | `./gradlew clean build` green; 96 unit tests pass; negative tests show the guards work; jar contents inspected. | Real-proxy smoke test denied by the permission system (B-1). Server tests need EULA acceptance (B-2). |
 | 2026-11-26 | 1 | Owner allowed local test servers, accepted the EULA and asked for a push. Smoke-tested 9 configurations (Velocity 4.3.1, BungeeCord, Paper 26.3 / 1.21.11 / 1.20.1 / 1.8.8, Folia 26.3, Spigot 26.3, plus a run without PacketEvents). Fixed legacy PaperSpigot detection. First commit pushed to `github.com/Intruder-tech/black-door`. | §5.1 table; `./gradlew build` green after the fix. | No player connected; Purpur and a Java 17 runtime are untested. |
+| 2026-11-26 | 1 | First CI run failed (thread-exit race, test race, OSV noise from compile-only platform APIs). Fixed the executor shutdown so it joins its threads, fixed the reload flag ordering and the test, and split the OSV scan into blocking (shipped) and informational (platform APIs). | CI run 45694262245 green; 8/8 local test reruns green. | GitHub warns that the pinned action versions (checkout@v4, setup-java@v4, ...) use deprecated Node 20; bump them. |
 
 ## 8. Approvals
 
@@ -225,8 +228,9 @@ onboarding in §9.
 
 ## 11. Next Steps
 
-1. Check the first GitHub Actions run (B-3) and fix anything that only fails in CI.
-2. Add a CycloneDX SBOM task and a Java 17 runtime test job to CI.
+1. Owner reviews and approves Phase 1 (all blockers resolved; remaining gaps listed in §5).
+2. CI upkeep: bump GitHub Actions to Node-24 versions; add a CycloneDX SBOM and a Java 17
+   runtime test job.
 3. Smoke test with a real player connected (exercises `runForPlayer` on Folia), and on Purpur.
 4. On Phase 1 approval: start Phase 2 with the world-view memory spike (OD-3) and the packet
    validation pipeline.
