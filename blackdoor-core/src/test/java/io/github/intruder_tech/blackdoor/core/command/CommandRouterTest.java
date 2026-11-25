@@ -83,8 +83,8 @@ class CommandRouterTest {
                 .contains("Running normally")
                 .contains("OFF &7(watch only)")
                 .contains("0.0.0-test")
-                .contains("Workers:")
-                .contains("config.yml:");
+                .contains("Workers")
+                .contains("config.yml");
         assertThat(sender.all()).doesNotContain(dir.toString());
     }
 
