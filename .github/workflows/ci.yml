@@ -60,6 +60,9 @@ jobs:
             --lockfile=blackdoor-config/gradle.lockfile
             --lockfile=blackdoor-protocol/gradle.lockfile
             --lockfile=blackdoor-protocol-packetevents/gradle.lockfile
+            --lockfile=blackdoor-violations/gradle.lockfile
+            --lockfile=blackdoor-state/gradle.lockfile
+            --lockfile=blackdoor-packets/gradle.lockfile
             --lockfile=blackdoor-core/gradle.lockfile
             --lockfile=dist-bukkit/gradle.lockfile
       # Informational: platform adapter lockfiles also list compile-only server/proxy APIs
