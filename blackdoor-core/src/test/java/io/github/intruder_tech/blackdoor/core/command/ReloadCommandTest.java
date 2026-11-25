@@ -49,8 +49,9 @@ class ReloadCommandTest {
         Files.writeString(dir.resolve("config.yml"), "config-version: 1\nworkers:\n  threads: 99\n");
         RecordingSender sender = RecordingSender.admin();
         engine.commands().dispatch(sender, new String[]{"reload"});
-        awaitMessage(sender, m -> m.contains("Reload failed"));
-        assertThat(sender.all()).contains("previous configuration kept").contains("workers.threads");
+        // The summary line and the error lines are sent one after another by the worker; wait for the last.
+        awaitMessage(sender, m -> m.contains("workers.threads"));
+        assertThat(sender.all()).contains("Reload failed").contains("previous configuration kept");
         assertThat(engine.settings().workerThreads()).isEqualTo(1);
     }
 

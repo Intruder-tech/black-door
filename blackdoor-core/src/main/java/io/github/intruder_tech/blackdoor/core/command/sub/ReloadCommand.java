@@ -60,11 +60,14 @@ public final class ReloadCommand implements Subcommand {
         lastStartNanos.set(now);
         String actor = sender.isConsole() ? "console" : sender.name();
         boolean queued = engine.submitWork(() -> {
+            ReloadResult result;
             try {
-                report(sender, engine.reloadConfiguration(actor));
+                result = engine.reloadConfiguration(actor);
             } finally {
+                // Release before replying, so a sender reacting to the reply never sees "in progress".
                 running.set(false);
             }
+            report(sender, result);
         });
         if (queued) {
             sender.sendMessage(Text.PREFIX + "Reloading configuration...");

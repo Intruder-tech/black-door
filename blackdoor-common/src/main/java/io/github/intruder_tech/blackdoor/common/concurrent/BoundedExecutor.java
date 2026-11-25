@@ -25,6 +25,7 @@ public final class BoundedExecutor {
     public static final String THREAD_PREFIX = "blackdoor-";
 
     private final String name;
+    private final NamedDaemonThreadFactory threadFactory;
     private final ThreadPoolExecutor pool;
     private final AtomicLong rejected = new AtomicLong();
     private final AtomicLong failed = new AtomicLong();
@@ -36,10 +37,11 @@ public final class BoundedExecutor {
         }
         this.name = Objects.requireNonNull(name, "name");
         this.logger = Objects.requireNonNull(logger, "logger");
+        this.threadFactory = new NamedDaemonThreadFactory(THREAD_PREFIX + name);
         this.pool = new ThreadPoolExecutor(
                 threads, threads, 0L, TimeUnit.MILLISECONDS,
                 new ArrayBlockingQueue<>(queueCapacity),
-                new NamedDaemonThreadFactory(THREAD_PREFIX + name),
+                threadFactory,
                 new ThreadPoolExecutor.AbortPolicy());
     }
 
@@ -69,15 +71,21 @@ public final class BoundedExecutor {
         }
     }
 
-    /** Stops accepting work, waits up to {@code timeout} for queued tasks, then interrupts. */
+    /**
+     * Stops accepting work, waits up to {@code timeout} for queued tasks, then interrupts.
+     * Returns {@code true} only when every worker thread has actually exited, so callers can rely on
+     * "no Black Door threads left" after a successful shutdown (pool termination alone fires
+     * slightly before the threads finish dying).
+     */
     public boolean shutdown(Duration timeout) {
         pool.shutdown();
         try {
-            if (pool.awaitTermination(timeout.toMillis(), TimeUnit.MILLISECONDS)) {
-                return true;
+            boolean terminated = pool.awaitTermination(timeout.toMillis(), TimeUnit.MILLISECONDS);
+            if (!terminated) {
+                pool.shutdownNow();
+                terminated = pool.awaitTermination(timeout.toMillis(), TimeUnit.MILLISECONDS);
             }
-            pool.shutdownNow();
-            return pool.awaitTermination(timeout.toMillis(), TimeUnit.MILLISECONDS);
+            return terminated && threadFactory.joinAll(timeout);
         } catch (InterruptedException e) {
             pool.shutdownNow();
             Thread.currentThread().interrupt();
@@ -101,6 +109,8 @@ public final class BoundedExecutor {
     private static final class NamedDaemonThreadFactory implements ThreadFactory {
         private final String prefix;
         private final AtomicInteger counter = new AtomicInteger();
+        /** Bounded: the pool is fixed-size and tasks never kill their worker (runGuarded). */
+        private final java.util.List<Thread> created = new java.util.concurrent.CopyOnWriteArrayList<>();
 
         NamedDaemonThreadFactory(String prefix) {
             this.prefix = prefix;
@@ -110,7 +120,22 @@ public final class BoundedExecutor {
         public Thread newThread(Runnable runnable) {
             Thread thread = new Thread(runnable, prefix + "-" + counter.incrementAndGet());
             thread.setDaemon(true);
+            created.add(thread);
             return thread;
+        }
+
+        boolean joinAll(Duration timeout) throws InterruptedException {
+            long deadline = System.nanoTime() + timeout.toNanos();
+            for (Thread thread : created) {
+                long remainingMillis = TimeUnit.NANOSECONDS.toMillis(deadline - System.nanoTime());
+                if (remainingMillis > 0) {
+                    thread.join(remainingMillis);
+                }
+                if (thread.isAlive()) {
+                    return false;
+                }
+            }
+            return true;
         }
     }
 }

@@ -49,9 +49,28 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-      - name: Scan lock and build files with OSV-Scanner
+      # Blocking: modules whose external runtime dependencies are shaded into the shipped jars
+      # (today only SnakeYAML). A finding here affects Black Door itself.
+      - name: Scan shipped dependencies (blocking)
         uses: google/osv-scanner-action/osv-scanner-action@v2.0.2
         with:
           scan-args: |-
-            --recursive
-            ./
+            --lockfile=blackdoor-api/gradle.lockfile
+            --lockfile=blackdoor-common/gradle.lockfile
+            --lockfile=blackdoor-config/gradle.lockfile
+            --lockfile=blackdoor-protocol/gradle.lockfile
+            --lockfile=blackdoor-protocol-packetevents/gradle.lockfile
+            --lockfile=blackdoor-core/gradle.lockfile
+            --lockfile=dist-bukkit/gradle.lockfile
+      # Informational: platform adapter lockfiles also list compile-only server/proxy APIs
+      # (e.g. Spigot 1.8.8's guava 18 / snakeyaml 1.15). Those libraries are provided by the
+      # server or proxy at runtime and are not shipped by Black Door.
+      - name: Scan platform API dependencies (informational)
+        continue-on-error: true
+        uses: google/osv-scanner-action/osv-scanner-action@v2.0.2
+        with:
+          scan-args: |-
+            --lockfile=blackdoor-platform-bukkit/gradle.lockfile
+            --lockfile=blackdoor-platform-paper/gradle.lockfile
+            --lockfile=blackdoor-proxy-velocity/gradle.lockfile
+            --lockfile=blackdoor-proxy-bungee/gradle.lockfile
