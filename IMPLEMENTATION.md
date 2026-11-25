@@ -8,7 +8,7 @@
 **Current phase:** Phase 2 — Packet inspection, player state, physics
 **Phase status:** **Milestones 2.1 and 2.2 done** (packet security engine, player state, findings ledger, transactions and latency,
 in-game control panel and `/blackdoor setup`). Milestones 2.3 and 2.4 not started (§12).
-**Protections active:** 7 deterministic/heuristic packet checks, **monitor mode by default**
+**Protections active:** 8 packet checks (7 deterministic, 1 heuristic), **monitor mode by default**
 (they log findings; they block only if you set a check to `mitigate` and the global mode to `enforce`).
 **Next gate:** A real player session to exercise packet checks and the GUI (§2, B-4), then milestone 2.2.
 
