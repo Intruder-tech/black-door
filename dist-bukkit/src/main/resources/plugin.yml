@@ -5,7 +5,7 @@ main: io.github.intruder_tech.blackdoor.platform.bukkit.BlackDoorBukkitPlugin
 api-version: '1.13'
 folia-supported: true
 softdepend: [packetevents]
-description: Server-side security framework (Phase 1 foundation build - no protections active yet).
+description: Server-side security framework (Phase 2 - packet checks in monitor mode; see /blackdoor setup).
 authors: [Intruder-tech]
 website: https://github.com/Intruder-tech
 commands:
@@ -28,4 +28,19 @@ permissions:
     default: op
   blackdoor.command.diagnostics:
     description: View technical diagnostics
+    default: op
+  blackdoor.command.setup:
+    description: Run the initial security check (/blackdoor setup)
+    default: op
+  blackdoor.command.gui:
+    description: Open the in-game control panel (view only)
+    default: op
+  blackdoor.gui.edit:
+    description: Change settings from the in-game control panel
+    default: op
+  blackdoor.command.checks:
+    description: List checks and finding counts
+    default: op
+  blackdoor.command.player:
+    description: Inspect a player's tracked state and findings
     default: op

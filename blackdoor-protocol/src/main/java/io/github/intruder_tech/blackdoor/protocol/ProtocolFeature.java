@@ -14,6 +14,8 @@ public enum ProtocolFeature {
     IDLE_FLYING_PACKET(Side.CLIENT, MinecraftVersion.of(1, 8), MinecraftVersion.of(1, 9), true),
     /** Attack cooldown / 1.9 combat rules. */
     ATTACK_COOLDOWN(Side.SERVER, MinecraftVersion.of(1, 9), null, true),
+    /** Client confirms server teleports with an id (Teleport Confirm packet). */
+    TELEPORT_CONFIRM(Side.CLIENT, MinecraftVersion.of(1, 9), null, true),
     /** Off-hand slot. */
     OFFHAND(Side.SERVER, MinecraftVersion.of(1, 9), null, true),
     /** Block states replaced numeric block IDs ("the flattening"). */

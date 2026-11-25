@@ -12,13 +12,16 @@ val moduleLayers = mapOf(
     "blackdoor-common" to 1,
     "blackdoor-config" to 2,
     "blackdoor-protocol" to 2,
+    "blackdoor-violations" to 2,
     "blackdoor-protocol-packetevents" to 3,
-    "blackdoor-core" to 4,
-    "blackdoor-platform-bukkit" to 5,
-    "blackdoor-platform-paper" to 5,
-    "blackdoor-proxy-velocity" to 5,
-    "blackdoor-proxy-bungee" to 5,
-    "dist-bukkit" to 6,
+    "blackdoor-state" to 3,
+    "blackdoor-packets" to 4,
+    "blackdoor-core" to 5,
+    "blackdoor-platform-bukkit" to 6,
+    "blackdoor-platform-paper" to 6,
+    "blackdoor-proxy-velocity" to 6,
+    "blackdoor-proxy-bungee" to 6,
+    "dist-bukkit" to 7,
 )
 
 /** Modules allowed to depend on the PacketEvents adapter (ADR-003). */

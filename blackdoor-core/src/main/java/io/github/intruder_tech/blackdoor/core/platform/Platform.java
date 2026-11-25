@@ -21,4 +21,14 @@ public interface Platform {
 
     /** Version from the plugin descriptor. */
     String pluginVersion();
+
+    /** Security-relevant server settings, for /blackdoor setup. Unknown by default. */
+    default SecurityFacts securityFacts() {
+        return SecurityFacts.UNKNOWN;
+    }
+
+    /** In-game menus, where the platform supports them (Bukkit-family servers). */
+    default java.util.Optional<io.github.intruder_tech.blackdoor.core.menu.MenuPresenter> menus() {
+        return java.util.Optional.empty();
+    }
 }

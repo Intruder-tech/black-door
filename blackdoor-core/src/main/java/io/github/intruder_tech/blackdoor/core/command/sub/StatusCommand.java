@@ -54,7 +54,17 @@ public final class StatusCommand implements Subcommand {
                 + lower(VersionSupport.classify(v))));
         engine.workerStats().ifPresent(s -> sender.sendMessage("&8 - &7Workers: &f" + s.queued() + "/" + s.queueCapacity()
                 + " queued, " + s.rejected() + " rejected, " + s.failed() + " failed"));
-        sender.sendMessage("&8 - &7Protections active: &fnone yet &7(Phase 1 foundation build)");
+        if (engine.packetEngine().isPresent()) {
+            var stats = engine.packetEngine().get().stats();
+            sender.sendMessage("&8 - &7Packet checks: &aactive &7(" + stats.processed() + " packets inspected, "
+                    + engine.ledger().map(l -> l.total()).orElse(0L) + " findings, " + stats.dropped() + " blocked)");
+            sender.sendMessage("&8 - &7Movement/combat checks: &8planned (Phase 3)");
+        } else {
+            sender.sendMessage("&8 - &7Protections active: &fnone on this platform yet");
+        }
+        if (!engine.settings().setupCompleted()) {
+            sender.sendMessage("&8 - &eSetup not completed: run &f/" + engine.commands().label() + " setup");
+        }
         for (String reason : engine.degradedReasons()) {
             sender.sendMessage("&8 - &eDegraded: &7" + Text.escape(reason));
         }

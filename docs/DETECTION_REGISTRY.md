@@ -101,6 +101,11 @@ engine, not just by defaults).
 
 ## 6. Packet-Based
 
+> **Status 2026-11-26:** implemented (monitor by default, unit-tested, not yet validated on real
+> player traffic): `packet.invalid-position`, `packet.invalid-rotation`, `packet.invalid-slot`,
+> `packet.self-interact`, `packet.teleport-confirm`, `packet.oversized`, `packet.flood`. Still
+> planned: blink, packetfly, transaction anomalies (need the milestone 2.2 transaction manager).
+
 | ID | Method | Confidence | Phase |
 |---|---|---|---|
 | `packet.badpackets` | Family of deterministic protocol violations (out-of-order, wrong state, impossible field values, duplicate sequence numbers) | Deterministic | 2 |

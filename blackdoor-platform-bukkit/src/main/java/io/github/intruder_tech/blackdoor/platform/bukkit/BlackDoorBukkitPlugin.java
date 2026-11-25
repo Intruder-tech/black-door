@@ -34,9 +34,11 @@ public final class BlackDoorBukkitPlugin extends JavaPlugin {
         try {
             PlatformInfo info = BukkitEnvironment.detect(getServer(), protocol);
             PlatformScheduler scheduler = createScheduler(logger, info);
+            BukkitMenuPresenter presenter = new BukkitMenuPresenter(scheduler, logger);
             engine = new BlackDoorEngine(new BukkitPlatform(info, scheduler, logger, getDataFolder().toPath(),
-                    protocol, getDescription().getVersion()), TimeSource.system());
+                    protocol, getDescription().getVersion(), presenter), TimeSource.system());
             engine.enable();
+            getServer().getPluginManager().registerEvents(presenter, this);
             registerCommand(scheduler);
         } catch (RuntimeException e) {
             logger.error("Black Door could not start and will disable itself.", e);

@@ -19,7 +19,9 @@ public class RecordingSender implements BdSender {
 
     public static RecordingSender admin() {
         return new RecordingSender("Admin", Set.of("blackdoor.command.help", "blackdoor.command.status",
-                "blackdoor.command.version", "blackdoor.command.reload", "blackdoor.command.diagnostics"));
+                "blackdoor.command.version", "blackdoor.command.reload", "blackdoor.command.diagnostics",
+                "blackdoor.command.setup", "blackdoor.command.gui", "blackdoor.command.checks", "blackdoor.command.player",
+                "blackdoor.gui.edit"));
     }
 
     public String all() {

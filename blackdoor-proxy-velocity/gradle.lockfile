@@ -38,4 +38,4 @@ org.spongepowered:configurate-gson:4.2.0=annotationProcessor,compileClasspath
 org.spongepowered:configurate-hocon:4.2.0=annotationProcessor,compileClasspath
 org.spongepowered:configurate-yaml:4.2.0=annotationProcessor,compileClasspath
 org.yaml:snakeyaml:2.7=annotationProcessor,compileClasspath,runtimeClasspath
-empty=
+empty=shadow

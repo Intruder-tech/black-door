@@ -2,4 +2,4 @@
 # Manual edits can break the build and are not advised.
 # This file is expected to be part of source control.
 org.yaml:snakeyaml:2.7=runtimeClasspath
-empty=
+empty=shadow

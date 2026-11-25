@@ -5,12 +5,12 @@
 > blocked, and what needs the owner's decision.
 
 **Last updated:** 2026-11-26
-**Current phase:** Phase 1 — Foundation
-**Phase status:** **Code complete, smoke-tested on 9 real server/proxy configurations (§5.1),
-CI green on GitHub — awaiting owner approval.** Known gaps: no player connected during tests,
-Purpur and a Java 17 runtime untested, SBOM not added yet.
-**Protections active:** None. Phase 1 contains no security features by design.
-**Next gate:** Owner approves Phase 1, then Phase 2 starts.
+**Current phase:** Phase 2 — Packet inspection, player state, physics
+**Phase status:** **Milestone 2.1 done** (packet security engine, player state, findings ledger,
+in-game control panel and `/blackdoor setup`). Milestones 2.2 to 2.4 not started (§12).
+**Protections active:** 7 deterministic/heuristic packet checks, **monitor mode by default**
+(they log findings; they block only if you set a check to `mitigate` and the global mode to `enforce`).
+**Next gate:** A real player session to exercise packet checks and the GUI (§2, B-4), then milestone 2.2.
 
 ---
 
@@ -19,8 +19,8 @@ Purpur and a Java 17 runtime untested, SBOM not added yet.
 | Phase | Name | Status | Started | Gate passed |
 |---|---|---|---|---|
 | 0 | Research, feasibility, threat model, architecture | **Done** | 2026-11-26 | 2026-11-26 (owner: "Proceeded with Phase I") |
-| 1 | Core architecture, build, adapters, protocol abstraction, config | **In progress — awaiting verification** | 2026-11-26 | — |
-| 2 | Packet inspection, player state, physics | Not started | — | — |
+| 1 | Core architecture, build, adapters, protocol abstraction, config | **Done** | 2026-11-26 | 2026-11-26 (owner: "approved, proceed with Phase 2") |
+| 2 | Packet inspection, player state, physics | **In progress** (2.1 done) | 2026-11-26 | — |
 | 3 | Combat / movement / inventory / interaction detections | Not started | — | — |
 | 4 | Exploits, app-layer network protection, proxies | Not started | — | — |
 | 5 | Behavior analysis, correlation, enforcement | Not started | — | — |
@@ -37,6 +37,8 @@ Status values: Not started · In progress · In review · Blocked · Done.
 | B-1 | Smoke test on real Velocity and BungeeCord | **Resolved 2026-11-26.** Owner allowed local test proxies. | — |
 | B-2 | Smoke test on real Paper / Spigot / Folia | **Resolved 2026-11-26.** Owner allowed local test servers and accepted the Minecraft EULA for them. | — |
 | B-3 | CI on GitHub | **Resolved 2026-11-26.** Pushed to `github.com/Intruder-tech/black-door` (private). Run #2 is green. | — |
+| B-4 | Real player traffic | Packet checks and the GUI have only been tested with unit tests and server consoles. No player has joined a test server, so no real packets have been inspected and no GUI clicks have been made in a real client. | Join a local test server with your Minecraft client (I can start one and op your account), open `/blackdoor gui`, click through, then move around normally. |
+| B-5 | Physics golden traces (milestone 2.4) | Prediction checks must produce zero flags on recordings of legitimate play, which can only come from real clients. | Later: record test sessions on a local server (procedure to be written in milestone 2.4). |
 
 ## 3. Decisions (resolved this session)
 
@@ -198,6 +200,7 @@ onboarding in §9.
 | 2026-11-26 | 0 | Researched ecosystem state. Wrote all Phase 0 documents and this tracker. | Documents written; `[verify]` facts flagged. | — |
 | 2026-11-26 | 0→1 | Owner approved Phase 0 and resolved OD-1/2/4/5/6. | Recorded in §3. | — |
 | 2026-11-26 | 1 | Installed a portable JDK 21 (checksum verified), initialized git (no commits). Built the Gradle multi-module foundation: 10 code modules + universal Bukkit jar, two proxy jars, config framework, version model, PacketEvents adapter, platform adapters, admin commands, audit log, architecture and source-rule checks, dependency locking, CI workflow, GPL-3.0 license. Updated the docs for ADR-012 to ADR-016. | `./gradlew clean build` green; 96 unit tests pass; negative tests show the guards work; jar contents inspected. | Real-proxy smoke test denied by the permission system (B-1). Server tests need EULA acceptance (B-2). |
+| 2026-11-26 | 2 | Phase 1 approved. Milestone 2.1: packet engine (7 checks), player state, findings ledger, PacketEvents listener, `checks.yml`. Owner added a requirement mid-session (in-game GUI plus one-command setup); delivered `/blackdoor setup`, `/blackdoor gui`, `/blackdoor checks`, `/blackdoor player`, plus comment-preserving in-game config edits. | Build green; 96 → 143 unit tests (all pass); console smoke tests on Paper 26.3, Folia 26.3, Paper 1.8.8, Spigot 26.3. | Needs a real player session (B-4). |
 | 2026-11-26 | 1 | Owner allowed local test servers, accepted the EULA and asked for a push. Smoke-tested 9 configurations (Velocity 4.3.1, BungeeCord, Paper 26.3 / 1.21.11 / 1.20.1 / 1.8.8, Folia 26.3, Spigot 26.3, plus a run without PacketEvents). Fixed legacy PaperSpigot detection. First commit pushed to `github.com/Intruder-tech/black-door`. | §5.1 table; `./gradlew build` green after the fix. | No player connected; Purpur and a Java 17 runtime are untested. |
 | 2026-11-26 | 1 | First CI run failed (thread-exit race, test race, OSV noise from compile-only platform APIs). Fixed the executor shutdown so it joins its threads, fixed the reload flag ordering and the test, and split the OSV scan into blocking (shipped) and informational (platform APIs). | CI run 45694262245 green; 8/8 local test reruns green. | GitHub warns that the pinned action versions (checkout@v4, setup-java@v4, ...) use deprecated Node 20; bump them. |
 
@@ -206,7 +209,7 @@ onboarding in §9.
 | Date | Phase | Approved by | Notes |
 |---|---|---|---|
 | 2026-11-26 | 0 | Owner | "Proceeded with Phase I"; decisions chosen via questionnaire |
-| — | 1 | — | Pending B-1/B-2 verification |
+| 2026-11-26 | 1 | Owner | "approved, proceed with Phase 2" |
 
 ## 9. Version Onboarding Log
 
@@ -226,11 +229,70 @@ onboarding in §9.
 | GPL-3.0 coupling via PacketEvents | — | Resolved: project is GPL-3.0 | Closed |
 | BungeeCord legacy forwarding spoofing | Medium | Phase 4 | Mitigation designed |
 
+## 12. Phase 2 Milestones
+
+| # | Milestone | Status | Notes |
+|---|---|---|---|
+| 2.1 | Packet security engine, player state, findings ledger, PacketEvents listener, `checks.yml`; **plus (owner request) `/blackdoor setup` and the in-game GUI** | **Done 2026-11-26** | See §13 |
+| 2.2 | Transaction manager (Ping/Pong and window confirmation), entity tracker, outbound velocity/effect tracking | Not started | Needs real-client testing (B-4) |
+| 2.3 | World-view memory spike (OD-3) with measured heap numbers | Not started | Measurements go to docs/BENCHMARK_REPORT.md |
+| 2.4 | Physics core (walk/jump/collide/effects/knockback) for 1.8.8, latest 1.21.x, latest 26.x, plus golden-trace harness | Not started | Blocked on golden traces from real clients (B-5) |
+
+## 13. Milestone 2.1 — What Was Built and Verified
+
+**New modules:** `blackdoor-violations` (findings, bounded ledger, rate-limited alerts),
+`blackdoor-state` (per-connection session, movement ring buffer, pending teleports, attachments),
+`blackdoor-packets` (engine plus 7 checks). The layering check now covers 14 modules.
+
+**Packet checks** (all default to `monitor`; `mitigate` blocks only when global mode is `enforce`):
+
+| Check | What it catches | Confidence |
+|---|---|---|
+| `packet.invalid-position` | NaN/infinite coordinates, or beyond the vanilla clamp (±3.0E7 horizontal, ±2.0E7 vertical) | Deterministic |
+| `packet.invalid-rotation` | Pitch outside ±90 (with 1e-4 tolerance), non-finite yaw/pitch | Deterministic |
+| `packet.invalid-slot` | Held-item slot outside 0..8 | Deterministic |
+| `packet.self-interact` | Interacting with your own entity id (only after the login was observed) | Deterministic |
+| `packet.teleport-confirm` | Confirming a teleport id never sent (skipped without an observed login or under Via translation) | Deterministic |
+| `packet.oversized` | Movement packets > 64 bytes; chat/command/tab-complete text over limits | Deterministic |
+| `packet.flood` | Per-connection rates (movement, interact, text, total); at most one finding per second | Heuristic |
+
+**Design points:** runs on each connection's network thread; fails open on internal errors; all
+state is bounded (sessions, teleport queue, history, ledger); PacketEvents is registered at LOWEST
+priority so a dropped packet reaches other plugins already cancelled; 26.x `ATTACK` packets are
+mapped like interact-attack.
+
+**Owner requests delivered:**
+- `/blackdoor setup [profile]`: checks the packet layer, version support, online mode / BungeeCord
+  forwarding / bind address, config validity, global mode and the audit log. It prints OK / WARN /
+  FAIL lines, records the profile, sets `setup.completed: true` and points to `/blackdoor gui`. It
+  never weakens anything.
+- `/blackdoor gui`: chest-menu control panel. The global mode toggle and every packet check's mode
+  cycle on click. Status shows live counters. Reload is a button. Movement/combat, Anti X-Ray/ESP
+  and network protection appear as **locked "coming in Phase N"** items, not fake toggles.
+  Viewing needs `blackdoor.command.gui`; changing needs `blackdoor.gui.edit`.
+- Every in-game change is comment-preserving (only the value is rewritten), validated against the
+  schema before writing, written atomically, reloaded all-or-nothing and audited.
+- GUI safety: identity-based inventory holder (never title-based); every click and drag in a Black
+  Door menu is cancelled at LOWEST and again at HIGHEST priority; rendering runs on the player's
+  owning thread (Folia-safe).
+- Also new: `/blackdoor checks` and `/blackdoor player <name>`.
+
+**Verification (2026-11-26):**
+- Unit tests: violations 5, state 5, packets 17 (including a 20,000-sample property test where
+  legitimate movement is never flagged, and fail-open on sink errors), config 32 (including the
+  comment-preserving editor), core 37 (setup, settings, GUI pages and clicks, permission gate). All
+  pass; full build green.
+- Real servers (localhost, console only): Paper 26.3, Folia 26.3, Paper 1.8.8 (Java 21) and
+  Spigot 26.3 start with the packet listener attached. `setup smp` passes all checks, sets the
+  profile and completes; `checks` and `status` show live counters; `gui` from the console is
+  refused correctly; clean shutdown on all four.
+- **Not verified yet:** packet inspection of real player traffic, GUI rendering and clicks in a
+  real client, the inspection-time budget under load (B-4).
+
 ## 11. Next Steps
 
-1. Owner reviews and approves Phase 1 (all blockers resolved; remaining gaps listed in §5).
-2. CI upkeep: bump GitHub Actions to Node-24 versions; add a CycloneDX SBOM and a Java 17
-   runtime test job.
-3. Smoke test with a real player connected (exercises `runForPlayer` on Folia), and on Purpur.
-4. On Phase 1 approval: start Phase 2 with the world-view memory spike (OD-3) and the packet
-   validation pipeline.
+1. B-4: owner joins a local test server, tries `/blackdoor gui`, and plays normally for a few
+   minutes. Expect zero findings.
+2. Milestone 2.2: transaction manager and entity tracker.
+3. Milestone 2.3: world-view memory spike (OD-3).
+4. CI upkeep: bump GitHub Actions to Node-24 versions; add a CycloneDX SBOM and a Java 17 runtime job.

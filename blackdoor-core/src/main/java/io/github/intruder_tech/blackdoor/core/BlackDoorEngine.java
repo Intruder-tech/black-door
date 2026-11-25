@@ -4,6 +4,11 @@ import io.github.intruder_tech.blackdoor.api.BlackDoor;
 import io.github.intruder_tech.blackdoor.api.BlackDoorProvider;
 import io.github.intruder_tech.blackdoor.common.concurrent.BoundedExecutor;
 import io.github.intruder_tech.blackdoor.common.log.BdLogger;
+import io.github.intruder_tech.blackdoor.common.log.RateLimitedLogger;
+import io.github.intruder_tech.blackdoor.packets.PacketSecurityEngine;
+import io.github.intruder_tech.blackdoor.packets.PacketSettings;
+import io.github.intruder_tech.blackdoor.state.SessionRegistry;
+import io.github.intruder_tech.blackdoor.violations.ViolationLedger;
 import io.github.intruder_tech.blackdoor.common.time.TimeSource;
 import io.github.intruder_tech.blackdoor.config.ConfigError;
 import io.github.intruder_tech.blackdoor.config.ConfigManager;
@@ -11,7 +16,11 @@ import io.github.intruder_tech.blackdoor.config.ConfigSnapshot;
 import io.github.intruder_tech.blackdoor.config.ReloadResult;
 import io.github.intruder_tech.blackdoor.core.audit.AuditLog;
 import io.github.intruder_tech.blackdoor.core.command.CommandRouter;
+import io.github.intruder_tech.blackdoor.core.command.sub.ChecksCommand;
 import io.github.intruder_tech.blackdoor.core.command.sub.DiagnosticsCommand;
+import io.github.intruder_tech.blackdoor.core.command.sub.GuiCommand;
+import io.github.intruder_tech.blackdoor.core.command.sub.PlayerCommand;
+import io.github.intruder_tech.blackdoor.core.command.sub.SetupCommand;
 import io.github.intruder_tech.blackdoor.core.command.sub.HelpCommand;
 import io.github.intruder_tech.blackdoor.core.command.sub.ReloadCommand;
 import io.github.intruder_tech.blackdoor.core.command.sub.StatusCommand;
@@ -47,12 +56,18 @@ public final class BlackDoorEngine {
     private final ConfigManager config;
     private final CommandRouter commands;
     private final BlackDoor api;
+    private final io.github.intruder_tech.blackdoor.core.settings.SettingsService settingsService;
+    private final io.github.intruder_tech.blackdoor.core.menu.BlackDoorMenus menus;
 
     private volatile EngineState lifecycle = EngineState.STOPPED;
     private volatile BoundedExecutor workers;
     private volatile AuditLog audit;
     private volatile ReloadResult lastReload;
     private volatile long startedAtMillis;
+    private volatile ViolationLedger ledger;
+    private volatile SessionRegistry sessions;
+    private volatile PacketSecurityEngine packetEngine;
+    private volatile boolean packetLayerAttached;
 
     public BlackDoorEngine(Platform platform, TimeSource time) {
         this.platform = Objects.requireNonNull(platform, "platform");
@@ -61,9 +76,15 @@ public final class BlackDoorEngine {
         this.config = new ConfigManager(platform.dataDirectory(), CoreConfig.ALL,
                 BlackDoorEngine.class.getClassLoader(), time);
         String label = platform.info().type().isProxy() ? PROXY_LABEL : BACKEND_LABEL;
+        this.settingsService = new io.github.intruder_tech.blackdoor.core.settings.SettingsService(this);
+        this.menus = new io.github.intruder_tech.blackdoor.core.menu.BlackDoorMenus(this, settingsService);
         this.commands = new CommandRouter(label, List.of(
                 new HelpCommand(this),
+                new SetupCommand(this),
+                new GuiCommand(this),
                 new StatusCommand(this),
+                new ChecksCommand(this),
+                new PlayerCommand(this),
                 new VersionCommand(this),
                 new ReloadCommand(this),
                 new DiagnosticsCommand(this)), logger);
@@ -84,6 +105,7 @@ public final class BlackDoorEngine {
             workers = new BoundedExecutor("worker", settings.workerThreads(), settings.workerQueueCapacity(), logger);
             audit = new AuditLog(platform.dataDirectory().resolve("audit"), workers, time, logger, settings.auditEnabled());
             checkEnvironment(settings);
+            startPacketLayer();
             try {
                 BlackDoorProvider.register(api);
             } catch (IllegalStateException e) {
@@ -95,6 +117,10 @@ public final class BlackDoorEngine {
                     + " (state " + state() + ", mode " + settings.mode() + ").");
             for (String reason : degradedReasons()) {
                 logger.warn("Degraded: " + reason);
+            }
+            if (!settings.setupCompleted()) {
+                logger.info("First run: execute '/" + commands.label() + " setup' for the initial security check, then '/"
+                        + commands.label() + " gui' in game to configure everything.");
             }
         } catch (RuntimeException e) {
             logger.error("Black Door failed to start; shutting down its components.", e);
@@ -139,9 +165,44 @@ public final class BlackDoorEngine {
         return result;
     }
 
+    /** Backend only: wires sessions, ledger and the packet engine to the packet library. */
+    private void startPacketLayer() {
+        ledger = new ViolationLedger(new RateLimitedLogger(logger, time, 3, 1, 256), 10_000, 200);
+        if (platform.info().type().isProxy() || !platform.protocol().isAvailable()) {
+            return;
+        }
+        sessions = new SessionRegistry(config.current().get(CoreConfig.CHECKS).maxSessions(), time);
+        packetEngine = new PacketSecurityEngine(sessions, ledger, time,
+                () -> config.current().get(CoreConfig.CHECKS),
+                () -> settings().mode() == GeneralSettings.Mode.ENFORCE,
+                platform.info().minecraft().orElse(null),
+                new RateLimitedLogger(logger, time, 3, 0.1, 16));
+        packetLayerAttached = platform.protocol().attach(packetEngine);
+        if (!packetLayerAttached) {
+            logger.error("Could not attach to " + platform.protocol().name() + "; packet checks are inactive.");
+        }
+    }
+
+    /**
+     * Changes one configuration value (comment-preserving), validates, writes and reloads.
+     * Blocking: call from a worker thread. Audited with actor, key and outcome.
+     */
+    public ReloadResult applyChange(io.github.intruder_tech.blackdoor.config.ConfigFileSpec<?> spec, String path,
+                                    String value, String actor) {
+        ReloadResult result = config.applyChange(spec, path, value);
+        lastReload = result;
+        report(result, "Setting change");
+        AuditLog currentAudit = audit;
+        if (currentAudit != null) {
+            currentAudit.record(actor, "setting.change " + spec.fileName() + ":" + path + "=" + value,
+                    result.success() ? "success" : "rejected: " + result.errors().size() + " error(s)");
+        }
+        return result;
+    }
+
     private void checkEnvironment(GeneralSettings settings) {
         if (settings.mode() == GeneralSettings.Mode.ENFORCE) {
-            logger.warn("mode is 'enforce', but no enforcement features exist in this build; behaving as monitor.");
+            logger.warn("mode is 'enforce': checks set to 'mitigate' will block offending packets.");
         }
         if (!"en_US".equals(settings.language())) {
             logger.warn("Language '" + settings.language() + "' is not available yet; using en_US.");
@@ -189,6 +250,17 @@ public final class BlackDoorEngine {
     private void shutdownComponents() {
         BlackDoorProvider.unregister(api);
         try {
+            platform.menus().ifPresent(io.github.intruder_tech.blackdoor.core.menu.MenuPresenter::closeAll);
+        } catch (RuntimeException e) {
+            logger.error("Failed to close open menus", e);
+        }
+        try {
+            platform.protocol().detach();
+        } catch (RuntimeException e) {
+            logger.error("Failed to detach from the packet library", e);
+        }
+        packetLayerAttached = false;
+        try {
             platform.scheduler().cancelAll();
         } catch (RuntimeException e) {
             logger.error("Failed to cancel scheduled tasks", e);
@@ -217,8 +289,34 @@ public final class BlackDoorEngine {
         }
         if (!platform.info().type().isProxy() && !platform.protocol().isAvailable()) {
             reasons.add("packet library unavailable (" + platform.protocol().name() + "); packet-level protections inactive");
+        } else if (!platform.info().type().isProxy() && lifecycle == EngineState.RUNNING && !packetLayerAttached) {
+            reasons.add("could not attach to the packet library; packet checks inactive");
         }
         return reasons;
+    }
+
+    public Optional<PacketSecurityEngine> packetEngine() {
+        return Optional.ofNullable(packetEngine);
+    }
+
+    public Optional<ViolationLedger> ledger() {
+        return Optional.ofNullable(ledger);
+    }
+
+    public Optional<SessionRegistry> sessions() {
+        return Optional.ofNullable(sessions);
+    }
+
+    public io.github.intruder_tech.blackdoor.core.settings.SettingsService settingsService() {
+        return settingsService;
+    }
+
+    public io.github.intruder_tech.blackdoor.core.menu.BlackDoorMenus menus() {
+        return menus;
+    }
+
+    public PacketSettings packetSettings() {
+        return config.current().get(CoreConfig.CHECKS);
     }
 
     /** Queues blocking work on the bounded worker pool. Returns false if saturated or stopped. */

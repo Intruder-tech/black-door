@@ -55,6 +55,29 @@ Behavior verified by unit tests:
 - YAML alias bombs, arbitrary-type tags (`!!javax...`), duplicate keys, nesting deeper than 32
   levels and files over 1 MiB are rejected.
 
+## 2b. Implemented in Phase 2 (milestone 2.1)
+
+**`checks.yml`:** `packet.<check>.mode` (`disabled` / `monitor` / `mitigate`) for invalid-position,
+invalid-rotation, invalid-slot, self-interact, teleport-confirm, oversized and flood. Also the
+oversized limits, the flood token buckets (`burst`, `per-second`; changes apply to new
+connections) and `packet.max-sessions` (restart required).
+
+**`config.yml`:** new key `setup.completed`, set by `/blackdoor setup`.
+
+**In-game configuration** (no file editing needed):
+
+1. `/blackdoor setup [profile]` runs the initial security check and finishes setup.
+2. `/blackdoor gui` opens the control panel: the global mode and per-check modes are click-to-cycle.
+3. Each change is applied by rewriting only that value (comments stay), validated, written
+   atomically, reloaded and audited (`audit/audit-YYYY-MM.log`).
+
+| Permission | Allows |
+|---|---|
+| `blackdoor.command.setup` | `/blackdoor setup` |
+| `blackdoor.command.gui` | Open the panel (view) |
+| `blackdoor.gui.edit` | Change settings in the panel |
+| `blackdoor.command.checks` / `blackdoor.command.player` | Text views |
+
 ## 3. Profiles (intent)
 
 | Profile | Intent |

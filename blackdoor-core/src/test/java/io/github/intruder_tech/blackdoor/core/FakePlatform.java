@@ -126,6 +126,11 @@ public final class FakePlatform implements Platform {
         }
 
         @Override
+        public boolean attach(io.github.intruder_tech.blackdoor.protocol.packet.PacketHandler handler) {
+            return true;
+        }
+
+        @Override
         public Optional<MinecraftVersion> clientVersion(Object platformPlayer) {
             return Optional.empty();
         }

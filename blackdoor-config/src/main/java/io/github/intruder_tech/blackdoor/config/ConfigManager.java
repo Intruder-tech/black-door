@@ -79,6 +79,25 @@ public final class ConfigManager {
         return new ReloadResult(false, true, errors, warnings, Set.of(), notes);
     }
 
+    /**
+     * Changes one value in one file (comment-preserving), validates the edited file with its
+     * schema, writes it atomically only if valid, then reloads everything all-or-nothing.
+     * Blocking I/O: worker threads only.
+     */
+    public synchronized ReloadResult applyChange(ConfigFileSpec<?> spec, String dottedPath, String value) {
+        if (!specs.contains(spec)) {
+            throw new IllegalArgumentException("unknown config file " + spec.fileName());
+        }
+        ConfigFileLoader loader = new ConfigFileLoader(directory, resources, time.currentTimeMillis());
+        try {
+            loader.edit(spec, dottedPath, value);
+        } catch (ConfigLoadException e) {
+            return new ReloadResult(false, current.get() != null && current.get().defaultsOnly(), e.errors(),
+                    List.of(), Set.of(), List.of("change rejected; file not modified"));
+        }
+        return load();
+    }
+
     /** The active snapshot. */
     public ConfigSnapshot current() {
         ConfigSnapshot snapshot = current.get();

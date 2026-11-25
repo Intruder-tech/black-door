@@ -44,6 +44,26 @@ final class BukkitEnvironment {
         return PlatformType.BUKKIT;
     }
 
+    /** Reads online-mode, BungeeCord forwarding (spigot.yml) and bind address; unknown values stay null. */
+    static io.github.intruder_tech.blackdoor.core.platform.SecurityFacts securityFacts() {
+        Boolean online = null;
+        Boolean bungee = null;
+        Boolean allInterfaces = null;
+        try {
+            online = Bukkit.getOnlineMode();
+            String ip = Bukkit.getIp();
+            allInterfaces = ip == null || ip.isEmpty();
+        } catch (RuntimeException | LinkageError e) {
+            // leave unknown
+        }
+        try {
+            bungee = Bukkit.spigot().getConfig().getBoolean("settings.bungeecord", false);
+        } catch (RuntimeException | LinkageError e) {
+            // spigot.yml API not available on this platform
+        }
+        return new io.github.intruder_tech.blackdoor.core.platform.SecurityFacts(online, bungee, allInterfaces);
+    }
+
     /** Paper 1.20+ and Folia expose region/entity schedulers on {@link Bukkit}. */
     static boolean hasRegionSchedulers() {
         try {

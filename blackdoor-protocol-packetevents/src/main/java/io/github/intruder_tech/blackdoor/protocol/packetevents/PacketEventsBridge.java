@@ -66,6 +66,53 @@ public final class PacketEventsBridge implements ProtocolBridge {
         }
     }
 
+    private com.github.retrooper.packetevents.event.PacketListenerCommon registered;
+    private BlackDoorPacketListener listener;
+
+    /**
+     * Registers at LOWEST priority so Black Door sees packets first and a dropped packet reaches
+     * other listeners already cancelled.
+     */
+    @Override
+    public synchronized boolean attach(io.github.intruder_tech.blackdoor.protocol.packet.PacketHandler handler) {
+        if (registered != null || !isAvailable()) {
+            return registered != null;
+        }
+        try {
+            listener = new BlackDoorPacketListener(handler);
+            registered = api().getEventManager().registerListener(listener,
+                    com.github.retrooper.packetevents.event.PacketListenerPriority.LOWEST);
+            return true;
+        } catch (RuntimeException | LinkageError e) {
+            registered = null;
+            listener = null;
+            return false;
+        }
+    }
+
+    @Override
+    public synchronized void detach() {
+        if (registered == null) {
+            return;
+        }
+        try {
+            PacketEventsAPI<?> api = api();
+            if (api != null) {
+                api.getEventManager().unregisterListener(registered);
+            }
+        } catch (RuntimeException | LinkageError e) {
+            // PacketEvents may already be shut down; nothing else to release.
+        } finally {
+            registered = null;
+            listener = null;
+        }
+    }
+
+    /** Packets that failed to translate (and were passed through untouched). */
+    public synchronized long translationErrors() {
+        return listener == null ? 0 : listener.translationErrors.sum();
+    }
+
     private static PacketEventsAPI<?> api() {
         try {
             return PacketEvents.getAPI();

@@ -1,0 +1,239 @@
+package io.github.intruder_tech.blackdoor.packets;
+
+import io.github.intruder_tech.blackdoor.common.log.RateLimitedLogger;
+import io.github.intruder_tech.blackdoor.common.time.TimeSource;
+import io.github.intruder_tech.blackdoor.protocol.MinecraftVersion;
+import io.github.intruder_tech.blackdoor.protocol.packet.ClientboundPacket;
+import io.github.intruder_tech.blackdoor.protocol.packet.ConnectionInfo;
+import io.github.intruder_tech.blackdoor.protocol.packet.ConnectionState;
+import io.github.intruder_tech.blackdoor.protocol.packet.PacketHandler;
+import io.github.intruder_tech.blackdoor.protocol.packet.PacketVerdict;
+import io.github.intruder_tech.blackdoor.protocol.packet.ServerboundPacket;
+import io.github.intruder_tech.blackdoor.state.AttachmentKey;
+import io.github.intruder_tech.blackdoor.state.PendingTeleports;
+import io.github.intruder_tech.blackdoor.state.PlayerSession;
+import io.github.intruder_tech.blackdoor.state.SessionRegistry;
+import io.github.intruder_tech.blackdoor.violations.Finding;
+import io.github.intruder_tech.blackdoor.violations.FindingSink;
+import io.github.intruder_tech.blackdoor.violations.Subject;
+
+import java.util.Objects;
+import java.util.Optional;
+import java.util.concurrent.atomic.LongAdder;
+import java.util.function.BooleanSupplier;
+import java.util.function.Supplier;
+
+/**
+ * Deterministic packet validation (Phase 2, milestone 2.1). Runs on each connection's network
+ * thread. Never throws: an internal error lets the packet pass and is counted (fail-open for our
+ * own bugs, docs/ARCHITECTURE.md section 7). Packets are dropped only when the check is set to
+ * MITIGATE <em>and</em> the global mode is "enforce".
+ */
+public final class PacketSecurityEngine implements PacketHandler {
+
+    /** Vanilla clamps coordinates to these magnitudes; no legitimate client exceeds them. */
+    static final double MAX_HORIZONTAL = 3.0E7;
+    static final double MAX_VERTICAL = 2.0E7;
+    static final float PITCH_LIMIT = 90.0f;
+    static final float PITCH_EPSILON = 1.0E-4f;
+
+    private static final AttachmentKey<FloodState> FLOOD = AttachmentKey.create("packet-flood");
+
+    private final SessionRegistry sessions;
+    private final FindingSink sink;
+    private final TimeSource time;
+    private final Supplier<PacketSettings> settings;
+    private final BooleanSupplier enforcementAllowed;
+    private final MinecraftVersion serverVersion;
+    private final RateLimitedLogger errorLog;
+
+    private final LongAdder processed = new LongAdder();
+    private final LongAdder dropped = new LongAdder();
+    private final LongAdder errors = new LongAdder();
+    private final LatencyHistogram latency = new LatencyHistogram();
+
+    public PacketSecurityEngine(SessionRegistry sessions, FindingSink sink, TimeSource time,
+                                Supplier<PacketSettings> settings, BooleanSupplier enforcementAllowed,
+                                MinecraftVersion serverVersion, RateLimitedLogger errorLog) {
+        this.sessions = Objects.requireNonNull(sessions, "sessions");
+        this.sink = Objects.requireNonNull(sink, "sink");
+        this.time = Objects.requireNonNull(time, "time");
+        this.settings = Objects.requireNonNull(settings, "settings");
+        this.enforcementAllowed = Objects.requireNonNull(enforcementAllowed, "enforcementAllowed");
+        this.serverVersion = serverVersion;
+        this.errorLog = Objects.requireNonNull(errorLog, "errorLog");
+    }
+
+    @Override
+    public PacketVerdict onInbound(ConnectionInfo connection, ConnectionState state, int wireSize, ServerboundPacket packet) {
+        long start = time.nanoTime();
+        try {
+            if (state != ConnectionState.PLAY) {
+                return PacketVerdict.PASS;
+            }
+            Optional<PlayerSession> found = sessions.session(connection);
+            if (found.isEmpty()) {
+                return PacketVerdict.PASS;
+            }
+            PlayerSession session = found.get();
+            session.countInbound();
+            PacketSettings cfg = settings.get();
+            boolean drop = inspect(session, cfg, wireSize, packet, start);
+            if (drop) {
+                dropped.increment();
+                return PacketVerdict.DROP;
+            }
+            return PacketVerdict.PASS;
+        } catch (RuntimeException e) {
+            errors.increment();
+            errorLog.error("packet-engine", "Packet engine error (packet allowed)", e);
+            return PacketVerdict.PASS;
+        } finally {
+            processed.increment();
+            latency.record(time.nanoTime() - start);
+        }
+    }
+
+    private boolean inspect(PlayerSession session, PacketSettings cfg, int wireSize, ServerboundPacket packet, long now) {
+        FloodState flood = session.attachment(FLOOD, () -> new FloodState(cfg, now));
+        boolean drop = rate(session, cfg, flood, FloodState.Category.TOTAL, now);
+        if (packet instanceof ServerboundPacket.Movement m) {
+            drop |= rate(session, cfg, flood, FloodState.Category.MOVEMENT, now);
+            drop |= movement(session, cfg, wireSize, m);
+        } else if (packet instanceof ServerboundPacket.TeleportConfirm t) {
+            drop |= teleportConfirm(session, cfg, t);
+        } else if (packet instanceof ServerboundPacket.HeldItemChange h) {
+            if (h.slot() < 0 || h.slot() > 8) {
+                drop |= report(session, cfg, PacketCheck.INVALID_SLOT, "slot=" + h.slot());
+            }
+        } else if (packet instanceof ServerboundPacket.InteractEntity i) {
+            drop |= rate(session, cfg, flood, FloodState.Category.INTERACT, now);
+            if (session.entityId() != -1 && i.entityId() == session.entityId()) {
+                drop |= report(session, cfg, PacketCheck.SELF_INTERACT, "action=" + i.action());
+            }
+        } else if (packet instanceof ServerboundPacket.ArmSwing) {
+            drop |= rate(session, cfg, flood, FloodState.Category.INTERACT, now);
+        } else if (packet instanceof ServerboundPacket.Text t) {
+            drop |= rate(session, cfg, flood, FloodState.Category.TEXT, now);
+            int limit = switch (t.kind()) {
+                case CHAT -> cfg.maxChatLength();
+                case COMMAND -> cfg.maxCommandLength();
+                case TAB_COMPLETE -> cfg.maxTabCompleteLength();
+            };
+            if (t.length() > limit) {
+                drop |= report(session, cfg, PacketCheck.OVERSIZED, t.kind() + " length " + t.length() + " > " + limit);
+            }
+        }
+        return drop;
+    }
+
+    private boolean movement(PlayerSession session, PacketSettings cfg, int wireSize, ServerboundPacket.Movement m) {
+        boolean drop = false;
+        boolean valid = true;
+        if (wireSize > cfg.maxMovementBytes()) {
+            drop |= report(session, cfg, PacketCheck.OVERSIZED, "movement packet " + wireSize + " bytes");
+        }
+        if (m.hasPosition()) {
+            if (!Double.isFinite(m.x()) || !Double.isFinite(m.y()) || !Double.isFinite(m.z())) {
+                drop |= report(session, cfg, PacketCheck.INVALID_POSITION, "non-finite position");
+                valid = false;
+            } else if (Math.abs(m.x()) > MAX_HORIZONTAL || Math.abs(m.z()) > MAX_HORIZONTAL || Math.abs(m.y()) > MAX_VERTICAL) {
+                drop |= report(session, cfg, PacketCheck.INVALID_POSITION,
+                        String.format(java.util.Locale.ROOT, "position %.1f %.1f %.1f out of world", m.x(), m.y(), m.z()));
+                valid = false;
+            }
+        }
+        if (m.hasRotation()) {
+            if (!Float.isFinite(m.yaw()) || !Float.isFinite(m.pitch())) {
+                drop |= report(session, cfg, PacketCheck.INVALID_ROTATION, "non-finite rotation");
+                valid = false;
+            } else if (Math.abs(m.pitch()) > PITCH_LIMIT + PITCH_EPSILON) {
+                drop |= report(session, cfg, PacketCheck.INVALID_ROTATION, "pitch=" + m.pitch());
+                valid = false;
+            }
+        }
+        if (valid && (m.hasPosition() || m.hasRotation())) {
+            var h = session.history();
+            boolean known = h.size() > 0;
+            if (m.hasPosition() || known) {
+                h.record(m.hasPosition() ? m.x() : h.x(0), m.hasPosition() ? m.y() : h.y(0), m.hasPosition() ? m.z() : h.z(0),
+                        m.hasRotation() ? m.yaw() : known ? h.yaw(0) : 0f,
+                        m.hasRotation() ? m.pitch() : known ? h.pitch(0) : 0f, m.onGround());
+            }
+        }
+        return drop;
+    }
+
+    private boolean teleportConfirm(PlayerSession session, PacketSettings cfg, ServerboundPacket.TeleportConfirm t) {
+        PendingTeleports.Result result = session.teleports().confirm(t.teleportId());
+        // No evidence, no verdict: if we did not see this session's login (e.g. plugin loaded mid-session)
+        // or a translator sits in between, unknown ids are not proof of anything.
+        boolean observedLogin = session.entityId() != -1;
+        boolean translated = serverVersion != null && session.clientVersion() != null
+                && !serverVersion.equals(session.clientVersion());
+        if (result == PendingTeleports.Result.UNKNOWN && observedLogin && !translated) {
+            return report(session, cfg, PacketCheck.TELEPORT_CONFIRM, "teleport id " + t.teleportId());
+        }
+        return false;
+    }
+
+    private boolean rate(PlayerSession session, PacketSettings cfg, FloodState flood, FloodState.Category category, long now) {
+        if (flood.tryAcquire(category, now)) {
+            return false;
+        }
+        CheckMode mode = cfg.mode(PacketCheck.FLOOD);
+        if (mode == CheckMode.DISABLED) {
+            return false;
+        }
+        long excess = flood.takeReport(category, now);
+        if (excess >= 0) {
+            report(session, cfg, PacketCheck.FLOOD, category.name().toLowerCase(java.util.Locale.ROOT)
+                    + " rate exceeded (" + excess + " excess packets in last report window)");
+        }
+        return mode == CheckMode.MITIGATE && enforcementAllowed.getAsBoolean();
+    }
+
+    private boolean report(PlayerSession session, PacketSettings cfg, PacketCheck check, String detail) {
+        CheckMode mode = cfg.mode(check);
+        if (mode == CheckMode.DISABLED) {
+            return false;
+        }
+        boolean mitigate = mode == CheckMode.MITIGATE && enforcementAllowed.getAsBoolean();
+        sink.accept(new Finding(check.id(), new Subject(session.uniqueId(), session.name()), check.confidence(),
+                detail, time.currentTimeMillis(), mitigate));
+        return mitigate;
+    }
+
+    @Override
+    public void onOutbound(ConnectionInfo connection, ClientboundPacket packet) {
+        try {
+            Optional<PlayerSession> found = sessions.session(connection);
+            if (found.isEmpty()) {
+                return;
+            }
+            if (packet instanceof ClientboundPacket.JoinGame j) {
+                found.get().entityId(j.entityId());
+            } else if (packet instanceof ClientboundPacket.SyncPosition s) {
+                found.get().teleports().sent(s.teleportId());
+            }
+        } catch (RuntimeException e) {
+            errors.increment();
+            errorLog.error("packet-engine", "Packet engine error on outbound packet", e);
+        }
+    }
+
+    @Override
+    public void onDisconnect(Object connectionKey) {
+        sessions.remove(connectionKey);
+    }
+
+    public Stats stats() {
+        return new Stats(processed.sum(), dropped.sum(), errors.sum(), sessions.size(), sessions.rejected(),
+                latency.percentileUpperBoundNanos(50), latency.percentileUpperBoundNanos(99));
+    }
+
+    /** Engine counters; latencies are log2 bucket upper bounds in nanoseconds. */
+    public record Stats(long processed, long dropped, long errors, int sessions, long sessionsRejected,
+                        long p50Nanos, long p99Nanos) {
+    }
+}

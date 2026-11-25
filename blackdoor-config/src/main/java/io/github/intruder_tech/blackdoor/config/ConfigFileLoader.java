@@ -56,6 +56,41 @@ final class ConfigFileLoader {
         return new Loaded<>(value, fingerprint(file, spec.fileName()), reader.warnings(), notes);
     }
 
+    /** Edits one scalar in the file on disk; writes only if the edited document passes validation. */
+    void edit(ConfigFileSpec<?> spec, String dottedPath, String value) throws ConfigLoadException {
+        Path file = resolve(spec.fileName());
+        String original;
+        try {
+            if (Files.notExists(file)) {
+                Files.createDirectories(directory);
+                writeAtomically(file, readDefault(spec));
+            }
+            if (Files.size(file) > YamlLoader.MAX_FILE_BYTES) {
+                throw new ConfigLoadException(ConfigError.error(spec.fileName(), "", "file too large"));
+            }
+            original = Files.readString(file, StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            throw new ConfigLoadException(ConfigError.error(spec.fileName(), "", "cannot read file: " + e.getClass().getSimpleName()));
+        }
+        String edited;
+        try {
+            edited = YamlLineEditor.setScalar(original, dottedPath, value, true);
+        } catch (IllegalArgumentException e) {
+            throw new ConfigLoadException(ConfigError.error(spec.fileName(), dottedPath, e.getMessage()));
+        }
+        Map<String, Object> root = YamlLoader.parse(spec.fileName(), edited);
+        if (readVersion(spec, root) != spec.currentVersion()) {
+            throw new ConfigLoadException(ConfigError.error(spec.fileName(), ConfigFileSpec.VERSION_KEY,
+                    "file needs migration; run reload first"));
+        }
+        parse(spec, new ConfigReader(spec.fileName(), root));
+        try {
+            writeAtomically(file, edited.getBytes(StandardCharsets.UTF_8));
+        } catch (IOException e) {
+            throw new ConfigLoadException(ConfigError.error(spec.fileName(), "", "cannot write file: " + e.getClass().getSimpleName()));
+        }
+    }
+
     /** Parses only the bundled default resource; used when no valid file has ever been loaded. */
     <T> T loadDefaults(ConfigFileSpec<T> spec) throws ConfigLoadException {
         String text = new String(readDefault(spec), StandardCharsets.UTF_8);

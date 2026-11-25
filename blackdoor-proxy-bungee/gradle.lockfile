@@ -31,4 +31,4 @@ net.md-5:bungeecord-serializer:1.21-R0.3=compileClasspath
 org.checkerframework:checker-qual:3.43.0=compileClasspath
 org.yaml:snakeyaml:2.2=compileClasspath
 org.yaml:snakeyaml:2.7=runtimeClasspath
-empty=annotationProcessor
+empty=annotationProcessor,shadow

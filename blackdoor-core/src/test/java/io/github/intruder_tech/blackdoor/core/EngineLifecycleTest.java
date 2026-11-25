@@ -106,7 +106,7 @@ class EngineLifecycleTest {
         FakePlatform platform = FakePlatform.paper(dir);
         engine = new BlackDoorEngine(platform, TimeSource.system());
         engine.enable();
-        assertThat(platform.logged("WARN", "no enforcement features exist")).isTrue();
+        assertThat(platform.logged("WARN", "will block offending packets")).isTrue();
     }
 
     @Test

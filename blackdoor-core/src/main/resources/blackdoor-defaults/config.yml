@@ -28,3 +28,7 @@ commands:
 audit:
   # Append-only record of administrative actions in plugins/<BlackDoor>/audit/
   enabled: true
+
+setup:
+  # Set by /blackdoor setup after the initial security check. Do not edit by hand.
+  completed: false

@@ -28,4 +28,17 @@ public interface ProtocolBridge {
      * @param platformPlayer the platform's player object (e.g. a Bukkit {@code Player})
      */
     Optional<MinecraftVersion> clientVersion(Object platformPlayer);
+
+    /**
+     * Starts delivering packets to {@code handler}. At most one handler is attached at a time.
+     *
+     * @return false if the packet library is unavailable (nothing is attached)
+     */
+    default boolean attach(io.github.intruder_tech.blackdoor.protocol.packet.PacketHandler handler) {
+        return false;
+    }
+
+    /** Stops packet delivery. Safe to call when nothing is attached. */
+    default void detach() {
+    }
 }
