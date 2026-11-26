@@ -32,7 +32,7 @@ final class MenuItems {
         put(Icon.CHECK_DISABLED, "GRAY_DYE", "COAL");
         put(Icon.CATEGORY, "DIAMOND_SWORD");
         put(Icon.LOCKED_COMBAT, "CHARCOAL", "COAL");
-        put(Icon.LOCKED_XRAY, "TINTED_GLASS", "GLASS");
+        put(Icon.ANTI_XRAY, "DIAMOND_ORE");
         put(Icon.STATUS, "AMETHYST_SHARD", "PAPER");
         put(Icon.INFO, "PAPER");
         put(Icon.RELOAD, "COMPASS");

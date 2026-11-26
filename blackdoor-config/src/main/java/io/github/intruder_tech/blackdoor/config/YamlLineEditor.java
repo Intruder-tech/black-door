@@ -31,8 +31,17 @@ public final class YamlLineEditor {
         if (!SAFE_SCALAR.matcher(value).matches()) {
             throw new IllegalArgumentException("unsupported value");
         }
-        String newline = yaml.contains("\r\n") ? "\r\n" : "\n";
-        String[] lines = yaml.split("\r?\n", -1);
+        // every line keeps its own ending: one file can mix CRLF and LF
+        String[] lines = yaml.split("\n", -1);
+        String[] ends = new String[lines.length];
+        for (int i = 0; i < lines.length; i++) {
+            boolean last = i == lines.length - 1;
+            boolean windows = !last && lines[i].endsWith("\r");
+            if (windows) {
+                lines[i] = lines[i].substring(0, lines[i].length() - 1);
+            }
+            ends[i] = last ? "" : windows ? "\r\n" : "\n";
+        }
         String[] target = dottedPath.split("[.]");
         List<int[]> stackIndent = new ArrayList<>();
         List<String> stackKeys = new ArrayList<>();
@@ -59,10 +68,10 @@ public final class YamlLineEditor {
             }
             String comment = commentAt < 0 ? "" : "  " + rest.substring(commentAt).trim();
             lines[i] = m.group(1) + m.group(2) + ": " + value + comment;
-            return String.join(newline, lines);
+            return join(List.of(lines), List.of(ends));
         }
         if (appendIfTopLevelMissing) {
-            return insertMissing(lines, target, value, newline);
+            return insertMissing(lines, ends, target, value);
         }
         throw new IllegalArgumentException(dottedPath + " not found in file; add it manually or restore the default file");
     }
@@ -72,7 +81,7 @@ public final class YamlLineEditor {
      * section (or at the end of the document when even the top-level key is absent). Used when a
      * newer version adds a key that older files do not have yet.
      */
-    private static String insertMissing(String[] lines, String[] target, String value, String newline) {
+    private static String insertMissing(String[] lines, String[] ends, String[] target, String value) {
         int anchorLine = -1;
         int anchorIndent = -1;
         int anchorDepth = 0;
@@ -103,11 +112,13 @@ public final class YamlLineEditor {
             }
         }
         List<String> out = new ArrayList<>(List.of(lines));
+        List<String> outEnds = new ArrayList<>(List.of(ends));
         int insertAt;
         int baseIndent;
         if (anchorLine < 0) {
             while (!out.isEmpty() && out.get(out.size() - 1).isEmpty()) {
                 out.remove(out.size() - 1);
+                outEnds.remove(outEnds.size() - 1);
             }
             insertAt = out.size();
             baseIndent = 0;
@@ -130,9 +141,36 @@ public final class YamlLineEditor {
             String indent = " ".repeat(baseIndent + 2 * (depth - anchorDepth));
             added.add(indent + target[depth] + ":" + (depth == target.length - 1 ? " " + value : ""));
         }
+        // new lines end like the line above them
+        String ending = endingBefore(outEnds, insertAt);
+        List<String> addedEnds = new ArrayList<>(java.util.Collections.nCopies(added.size(), ending));
+        if (insertAt > 0 && outEnds.get(insertAt - 1).isEmpty()) {
+            outEnds.set(insertAt - 1, ending);
+            if (anchorLine >= 0) {
+                addedEnds.set(added.size() - 1, "");
+            }
+        }
         out.addAll(insertAt, added);
-        String joined = String.join(newline, out);
-        return anchorLine < 0 ? joined + newline : joined;
+        outEnds.addAll(insertAt, addedEnds);
+        return join(out, outEnds);
+    }
+
+    /** The nearest line ending above {@code index}; LF when there is none. */
+    private static String endingBefore(List<String> ends, int index) {
+        for (int i = index - 1; i >= 0; i--) {
+            if (!ends.get(i).isEmpty()) {
+                return ends.get(i);
+            }
+        }
+        return "\n";
+    }
+
+    private static String join(List<String> lines, List<String> ends) {
+        StringBuilder out = new StringBuilder();
+        for (int i = 0; i < lines.size(); i++) {
+            out.append(lines.get(i)).append(ends.get(i));
+        }
+        return out.toString();
     }
 
     private static boolean isPrefix(List<String> keys, String[] target) {

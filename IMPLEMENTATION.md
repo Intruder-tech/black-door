@@ -366,6 +366,15 @@ about 0.5 us per connection (docs/BENCHMARK_REPORT.md section 2).
 "Later / Optional". Not verified: real online-mode accounts through a proxy, a distributed attack
 from real addresses. See docs/KNOWN_LIMITATIONS.md.
 
+**4.9 anti-xray switch (after Phase 4, owner's request):** the GUI item now turns Paper's
+anti-xray on or off (`core/antixray/AntiXrayFiles`: comment-preserving edit, backup once, atomic
+write, restore on a failed write; shows configured and running state; audited). The running state
+survives a plugin re-enable (`StartupSnapshot`, tagged with the JVM start time); setup uses the
+same logic. Also fixed: `YamlLineEditor` keeps each line's own ending in files that mix CRLF and
+LF. Unit tests only.
+**Not verified:** on a running Paper server (in game, and Paper reading the edited files after a
+restart).
+
 ## 11. Next Steps
 
 0. Owner to review and commit 4.7 (adaptive mode) and check the new GUI layout in game.

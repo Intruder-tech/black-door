@@ -1,5 +1,6 @@
 package io.github.intruder_tech.blackdoor.platform.bukkit;
 
+import io.github.intruder_tech.blackdoor.core.antixray.AntiXrayFiles;
 import io.github.intruder_tech.blackdoor.core.platform.PlatformInfo;
 import io.github.intruder_tech.blackdoor.core.platform.PlatformType;
 import io.github.intruder_tech.blackdoor.protocol.MinecraftVersion;
@@ -9,6 +10,7 @@ import org.bukkit.Server;
 import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.io.File;
+import java.nio.file.Path;
 import java.util.Optional;
 
 /** Detects which Bukkit-family server is running. Uses class presence only; never initializes server classes. */
@@ -88,7 +90,7 @@ final class BukkitEnvironment {
             // unreadable configuration: leave unknown
         }
         return new io.github.intruder_tech.blackdoor.core.platform.SecurityFacts(online, bungee, allInterfaces,
-                velocity, weakSecret, worldsWithoutAntiXray());
+                velocity, weakSecret);
     }
 
     /** Paper 1.20+ and Folia expose region/entity schedulers on {@link Bukkit}. */
@@ -116,27 +118,17 @@ final class BukkitEnvironment {
         }
     }
 
-    /** Loaded worlds where the anti-xray of Paper is off; null when this server has no such setting. */
-    private static java.util.List<String> worldsWithoutAntiXray() {
+    /** Paper's anti-xray files for the loaded worlds; server thread only. Empty if worlds cannot be listed. */
+    static Optional<AntiXrayFiles> antiXrayFiles() {
         try {
-            File defaults = new File("config/paper-world-defaults.yml");
-            if (!defaults.isFile()) {
-                return null;
-            }
-            String key = "anticheat.anti-xray.enabled";
-            boolean byDefault = YamlConfiguration.loadConfiguration(defaults).getBoolean(key, false);
-            java.util.List<String> without = new java.util.ArrayList<>();
+            java.util.Map<String, Path> worlds = new java.util.LinkedHashMap<>();
             for (org.bukkit.World world : Bukkit.getWorlds()) {
-                File override = new File(world.getWorldFolder(), "paper-world.yml");
-                boolean on = override.isFile()
-                        ? YamlConfiguration.loadConfiguration(override).getBoolean(key, byDefault) : byDefault;
-                if (!on) {
-                    without.add(world.getName());
-                }
+                worlds.put(world.getName(), world.getWorldFolder().toPath().toAbsolutePath());
             }
-            return without;
+            // the server runs in its own folder, so relative paths start there
+            return Optional.of(new AntiXrayFiles(Path.of("").toAbsolutePath(), worlds));
         } catch (RuntimeException | LinkageError e) {
-            return null;
+            return Optional.empty();
         }
     }
 }

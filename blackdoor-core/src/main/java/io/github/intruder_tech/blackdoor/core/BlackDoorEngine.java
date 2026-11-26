@@ -82,6 +82,7 @@ public final class BlackDoorEngine {
     private volatile java.util.concurrent.ScheduledExecutorService heartbeat;
     private volatile ProxyGate proxyGate;
     private volatile io.github.intruder_tech.blackdoor.auth.AuthService auth;
+    private volatile java.util.Map<String, Boolean> antiXrayAtStart = java.util.Map.of();
 
     /** How often Black Door pings each player for latency and acknowledgement tracking. */
     static final long TRANSACTION_INTERVAL_MS = 50;
@@ -126,6 +127,11 @@ public final class BlackDoorEngine {
             workers = new BoundedExecutor("worker", settings.workerThreads(), settings.workerQueueCapacity(), logger);
             audit = new AuditLog(platform.dataDirectory().resolve("audit"), workers, time, logger, settings.auditEnabled());
             checkEnvironment(settings);
+            // Paper read its anti-xray setting at startup: remember it, to tell "running" from "configured".
+            antiXrayAtStart = antiXrayFiles().map(files -> io.github.intruder_tech.blackdoor.core.antixray
+                    .StartupSnapshot.remember(platform.dataDirectory().resolve("antixray-startup.properties"),
+                            java.lang.management.ManagementFactory.getRuntimeMXBean().getStartTime(),
+                            files.worldStates(), logger::warn)).orElse(java.util.Map.of());
             startPacketLayer();
             if (!platform.info().type().isProxy()) {
                 auth = new io.github.intruder_tech.blackdoor.auth.AuthService(platform.dataDirectory().resolve("auth"),
@@ -360,6 +366,49 @@ public final class BlackDoorEngine {
                     result.success() ? "success" : "rejected: " + result.errors().size() + " error(s)");
         }
         return result;
+    }
+
+    /** Paper's anti-xray files; empty on anything but Paper-family servers. Server thread only. */
+    public Optional<io.github.intruder_tech.blackdoor.core.antixray.AntiXrayFiles> antiXrayFiles() {
+        return platform.info().type().isPaperFamily() ? platform.antiXrayFiles() : Optional.empty();
+    }
+
+    /** Configured and running anti-xray; empty when the files cannot be read. */
+    public Optional<io.github.intruder_tech.blackdoor.core.antixray.AntiXrayStatus> antiXrayStatus(
+            io.github.intruder_tech.blackdoor.core.antixray.AntiXrayFiles files) {
+        return Optional.ofNullable(files.worldStates()).map(configured ->
+                new io.github.intruder_tech.blackdoor.core.antixray.AntiXrayStatus(configured, antiXrayAtStart));
+    }
+
+    /**
+     * Switches Paper's anti-xray in Paper's files; the server applies it at its next restart.
+     * Blocking: call from a worker thread. Audited with actor and outcome.
+     *
+     * @return the number of files changed
+     */
+    public int setAntiXray(io.github.intruder_tech.blackdoor.core.antixray.AntiXrayFiles files, boolean enabled,
+                           String actor) throws java.io.IOException {
+        String action = "antixray.set enabled=" + enabled;
+        AuditLog currentAudit = audit;
+        try {
+            int changed = files.setEnabled(enabled).size();
+            if (currentAudit != null) {
+                currentAudit.record(actor, action, "success: " + changed + " file(s)");
+            }
+            return changed;
+        } catch (java.io.IOException e) {
+            logger.warn("Could not change Paper's anti-xray setting: " + e.getMessage());
+            if (currentAudit != null) {
+                currentAudit.record(actor, action, "failed: " + e.getMessage());
+            }
+            throw e;
+        } catch (RuntimeException e) {
+            logger.error("Could not change Paper's anti-xray setting", e);
+            if (currentAudit != null) {
+                currentAudit.record(actor, action, "failed: " + e.getClass().getSimpleName());
+            }
+            throw e;
+        }
     }
 
     private void checkEnvironment(GeneralSettings settings) {

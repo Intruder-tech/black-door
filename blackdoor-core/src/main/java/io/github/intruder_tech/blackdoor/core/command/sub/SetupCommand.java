@@ -103,7 +103,7 @@ public final class SetupCommand implements Subcommand {
             });
             SecurityFacts facts = engine.platform().securityFacts();
             forwarding(facts, lines);
-            antiXray(facts, lines);
+            antiXray(lines);
         } else {
             lines.add(ok("Proxy: join limits follow network.yml (mode " + engine.networkSettings().mode()
                     .name().toLowerCase(Locale.ROOT) + ")"));
@@ -148,15 +148,32 @@ public final class SetupCommand implements Subcommand {
     }
 
     /** Black Door does not hide ores itself; it checks that Paper does. */
-    private static void antiXray(SecurityFacts facts, List<String> lines) {
-        List<String> without = facts.worldsWithoutAntiXray();
-        if (without == null) {
-            lines.add(warn("Could not read the anti-xray setting (Paper only)."));
-        } else if (without.isEmpty()) {
-            lines.add(ok("Paper anti-xray is on in every world"));
+    private void antiXray(List<String> lines) {
+        var files = engine.antiXrayFiles();
+        if (files.isEmpty()) {
+            lines.add(warn("Anti-xray not checked on this server (Paper only)."));
+            return;
+        }
+        var found = engine.antiXrayStatus(files.get());
+        if (found.isEmpty()) {
+            lines.add(warn("Paper's anti-xray files could not be read (config/paper-world-defaults.yml and the"
+                    + " worlds' paper-world.yml)."));
+            return;
+        }
+        var status = found.get();
+        List<String> off = status.configuredOff();
+        if (!off.isEmpty()) {
+            lines.add(warn("Paper anti-xray is off in: " + String.join(", ", off) + ". Turn it on with the Anti X-Ray"
+                    + " item in /" + engine.commands().label() + " gui, then restart the server."
+                    + (status.changedSinceStart()
+                    ? " The setting changed since the server started and applies after the restart." : "")));
+        } else if (status.pending()) {
+            List<String> stillOff = status.runningOff();
+            lines.add(warn("Paper anti-xray is set to on but not running yet ("
+                    + (stillOff.isEmpty() ? "unknown in: " + String.join(", ", status.runningUnknown())
+                    : "off in: " + String.join(", ", stillOff)) + "): restart the server."));
         } else {
-            lines.add(warn("Paper anti-xray is off in: " + String.join(", ", without) + ". Set anticheat.anti-xray.enabled:"
-                    + " true in config/paper-world-defaults.yml and restart."));
+            lines.add(ok("Paper anti-xray is on in every world"));
         }
     }
 

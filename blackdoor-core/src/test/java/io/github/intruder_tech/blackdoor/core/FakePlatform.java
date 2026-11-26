@@ -24,10 +24,19 @@ public final class FakePlatform implements Platform {
     public io.github.intruder_tech.blackdoor.core.platform.SecurityFacts facts =
             io.github.intruder_tech.blackdoor.core.platform.SecurityFacts.UNKNOWN;
 
+    /** Paper's anti-xray files, when the test provides them. */
+    public io.github.intruder_tech.blackdoor.core.antixray.AntiXrayFiles antiXray;
+
     @Override
     public io.github.intruder_tech.blackdoor.core.platform.SecurityFacts securityFacts() {
         return facts;
     }
+
+    @Override
+    public java.util.Optional<io.github.intruder_tech.blackdoor.core.antixray.AntiXrayFiles> antiXrayFiles() {
+        return java.util.Optional.ofNullable(antiXray);
+    }
+
     private final Path dataDirectory;
     private final PlatformInfo info;
     private final ProtocolBridge protocol;

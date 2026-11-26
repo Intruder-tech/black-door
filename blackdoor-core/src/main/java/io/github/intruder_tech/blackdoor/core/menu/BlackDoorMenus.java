@@ -113,7 +113,7 @@ public final class BlackDoorMenus {
                             "", "&eClick to open"),
                     s -> s.show(packetChecks())));
             items.add(locked(14, Icon.LOCKED_COMBAT, "Movement & combat checks", "Fly, speed, reach, kill aura...", "Phase 3"));
-            items.add(antiXrayItem(16));
+            items.add(antiXrayItem(16, session.viewer().hasPermission(SettingsService.EDIT_PERMISSION)));
             Setting joins = settings.find(SettingsService.NETWORK_MODE).orElseThrow();
             String joinMode = settings.current(joins);
             Setting login = settings.find(SettingsService.AUTH_ENABLED).orElseThrow();
@@ -224,9 +224,7 @@ public final class BlackDoorMenus {
     }
 
     private void cycle(MenuSession session, Setting setting, String successMessage) {
-        if (!session.viewer().hasPermission(SettingsService.EDIT_PERMISSION)) {
-            session.viewer().sendMessage(Text.PREFIX + "&cYou can look, but you are not allowed to change settings ("
-                    + SettingsService.EDIT_PERMISSION + ").");
+        if (!mayEdit(session)) {
             return;
         }
         String next = settings.next(setting);
@@ -294,25 +292,102 @@ public final class BlackDoorMenus {
         return lore;
     }
 
-    /** Status only: Paper hides the ores, Black Door shows whether that is switched on. */
-    private MenuItem antiXrayItem(int slot) {
-        List<String> without = engine.platform().securityFacts().worldsWithoutAntiXray();
-        String state = without == null ? "&8Unknown" : without.isEmpty() ? "&aOn" : "&eOff";
+    /**
+     * Paper hides the ores; Black Door switches that on or off in Paper's files. The files are
+     * what is "configured"; what the server runs is what they said when it started.
+     */
+    private MenuItem antiXrayItem(int slot, boolean mayChange) {
         List<String> lore = new ArrayList<>();
         lore.add("&7Hides ores from X-ray cheats.");
-        lore.add("&7This is a feature of Paper itself.");
+        lore.add("&7This is Paper's own anti-xray;");
+        lore.add("&7Black Door only switches it on or off.");
+        lore.add("&7Its engine mode is not changed.");
         lore.add("");
-        if (without == null) {
-            lore.add("&8This server does not report it (Paper only).");
-        } else if (without.isEmpty()) {
-            lore.add("&aOn in every world.");
-        } else {
-            lore.add("&eOff in: &f" + Text.escape(String.join(", ", without)));
-            lore.add("&7Set &fanticheat.anti-xray.enabled: true");
-            lore.add("&7in &fconfig/paper-world-defaults.yml");
-            lore.add("&7and restart the server.");
+        var files = engine.antiXrayFiles();
+        var found = files.flatMap(engine::antiXrayStatus);
+        if (found.isEmpty()) {
+            lore.add(files.isEmpty() ? "&8Not available on this server (Paper only)."
+                    : "&ePaper's anti-xray files could not be read.");
+            return new MenuItem(slot, Icon.ANTI_XRAY, "&fAnti X-Ray &8| &8Unknown", lore, null);
         }
-        return new MenuItem(slot, Icon.LOCKED_XRAY, "&fAnti X-Ray &8| " + state, lore, null);
+        var status = found.get();
+        boolean on = status.configuredOff().isEmpty();
+        boolean pending = status.pending();
+        lore.add("&7Configured: " + antiXrayState(status.configuredOff()));
+        addRunning(lore, status);
+        if (pending) {
+            lore.add("&6Applies after the next server restart.");
+        } else {
+            lore.add("&8A change applies after the next server restart.");
+        }
+        String name = "&fAnti X-Ray &8| " + (on ? "&aOn" : "&eOff") + (pending ? " &6(after restart)" : "");
+        lore.add("");
+        lore.add(mayChange ? "&eClick to turn " + (on ? "off" : "on") : "&8You can look, but not change this.");
+        return new MenuItem(slot, on ? Icon.ANTI_XRAY : Icon.CHECK_DISABLED, name, lore,
+                s -> switchAntiXray(s, !on), on && !pending);
+    }
+
+    /** A world loaded after the server started is never shown as on. */
+    private static void addRunning(List<String> lore, io.github.intruder_tech.blackdoor.core.antixray.AntiXrayStatus
+            status) {
+        List<String> off = status.runningOff();
+        List<String> unknown = status.runningUnknown();
+        String unknownText = "&6Unknown until restart: &f" + Text.escape(String.join(", ", unknown));
+        if (unknown.isEmpty()) {
+            lore.add("&7Running now: " + antiXrayState(off));
+        } else if (off.isEmpty()) {
+            lore.add("&7Running now: " + unknownText);
+        } else {
+            lore.add("&7Running now: " + antiXrayState(off));
+            lore.add(unknownText);
+        }
+    }
+
+    private static String antiXrayState(List<String> off) {
+        return off.isEmpty() ? "&aOn" : "&eOff in: &f" + Text.escape(String.join(", ", off));
+    }
+
+    private void switchAntiXray(MenuSession session, boolean enable) {
+        if (!mayEdit(session)) {
+            return;
+        }
+        // The world list is read here, on the server thread; the file work happens on a worker.
+        var files = engine.antiXrayFiles().orElse(null);
+        if (files == null) {
+            return;
+        }
+        String actor = session.viewer().name();
+        String word = enable ? "On" : "Off";
+        boolean queued = engine.submitWork(() -> {
+            try {
+                int changed = engine.setAntiXray(files, enable, actor);
+                session.viewer().sendMessage(Text.PREFIX + (changed == 0
+                        ? "&7Anti X-Ray is already " + word + " in Paper's files."
+                        : "&aAnti X-Ray turned " + word + " in Paper's files.")
+                        + " &6It applies after the next server restart.");
+            } catch (java.io.IOException e) {
+                session.viewer().sendMessage(Text.PREFIX + "&cAnti X-Ray was not changed: "
+                        + Text.escape(String.valueOf(e.getMessage())));
+            } catch (RuntimeException e) {
+                // already logged and audited by the engine
+                session.viewer().sendMessage(Text.PREFIX
+                        + "&cAnti X-Ray was not changed: unexpected error, see the server log.");
+            } finally {
+                session.refresh();
+            }
+        });
+        if (!queued) {
+            session.viewer().sendMessage(Text.PREFIX + "&cBlack Door is busy; try again in a moment.");
+        }
+    }
+
+    private static boolean mayEdit(MenuSession session) {
+        if (session.viewer().hasPermission(SettingsService.EDIT_PERMISSION)) {
+            return true;
+        }
+        session.viewer().sendMessage(Text.PREFIX + "&cYou can look, but you are not allowed to change settings ("
+                + SettingsService.EDIT_PERMISSION + ").");
+        return false;
     }
 
     private static MenuItem locked(int slot, Icon icon, String name, String what, String phase) {

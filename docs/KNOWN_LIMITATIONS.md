@@ -35,8 +35,23 @@
   still needs: server changes (effects, velocity, abilities, blocks) applied when the client
   acknowledges them; the client's own block placing and breaking; the worn chest item, because a
   claimed elytra flight gets no verdict; and teleport confirmations matched by id.
-- Anti X-ray is Paper's own feature. Black Door only reports whether it is on, read from the
-  configuration files, so a change takes effect (and shows correctly) after a restart.
+- Anti X-ray is Paper's own feature. Black Door reports it and switches `enabled` on or off in
+  Paper's files (never `engine-mode` or the block lists); Paper applies it at the next restart.
+  "Running now" is what the files said when Black Door first started in this server run. A world
+  loaded later shows as unknown until a restart. If the plugin itself is first loaded while the
+  server is already running (with a plugin manager), it cannot know about earlier file edits.
+  Only loaded worlds are covered, and switching sets every per-world override to the same value
+  (a mix of on and off worlds is not restored).
+- Anti X-ray switch, smaller gaps:
+  - If someone edits one of Paper's files by hand at the same moment as the click, the hand edit
+    can be lost.
+  - A value written in quotes (`enabled: "true"`) is not understood: the world defaults then show
+    as off, and a quoted value in a world file is ignored.
+  - If one of these files is a link to a file elsewhere, changing it replaces the link with a
+    normal file.
+  - Only the `config/` folder in the server folder is read. A server started with
+    `--paper-settings-directory` is not supported.
+  - The files are read again each time the panel or setup is shown; nothing is cached.
 - Block shapes for movement prediction come from the running server: none on servers without
   `getCollisionShape`, none for blocks whose shape depends on position or player (scaffolding,
   powder snow, bamboo, pointed dripstone, moving pistons, shulker boxes), and clients older than

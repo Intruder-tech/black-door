@@ -10,19 +10,11 @@ package io.github.intruder_tech.blackdoor.core.platform;
  * @param velocityForwarding   Velocity modern forwarding is enabled (Paper configuration)
  * @param weakVelocitySecret   that forwarding's secret is empty or too short; the secret itself is
  *                             never kept
- * @param worldsWithoutAntiXray worlds where the built-in anti-xray of Paper is off
  */
 public record SecurityFacts(Boolean onlineMode, Boolean bungeeCordForwarding, Boolean boundToAllInterfaces,
-                            Boolean velocityForwarding, Boolean weakVelocitySecret,
-                            java.util.List<String> worldsWithoutAntiXray) {
+                            Boolean velocityForwarding, Boolean weakVelocitySecret) {
 
-    public static final SecurityFacts UNKNOWN = new SecurityFacts(null, null, null, null, null, null);
-
-    /** Without anti-xray information. */
-    public SecurityFacts(Boolean onlineMode, Boolean bungeeCordForwarding, Boolean boundToAllInterfaces,
-                         Boolean velocityForwarding, Boolean weakVelocitySecret) {
-        this(onlineMode, bungeeCordForwarding, boundToAllInterfaces, velocityForwarding, weakVelocitySecret, null);
-    }
+    public static final SecurityFacts UNKNOWN = new SecurityFacts(null, null, null, null, null);
 
     /** Players arrive through a proxy that forwards their identity. */
     public boolean behindProxy() {

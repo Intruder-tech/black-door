@@ -64,6 +64,33 @@ class YamlLineEditorTest {
         assertThat(YamlLineEditor.setScalar(crlf, "mode", "enforce")).contains("mode: enforce\r\n");
     }
 
+    /** As Paper writes on Windows: a CRLF header above an LF body. */
+    private static final String MIXED = "# header\r\n# more header\r\nanticheat:\n  anti-xray:\n"
+            + "    enabled: false\n    engine-mode: 1\nlast: 1\r\n";
+
+    @Test
+    void changingAValueKeepsEveryLinesOwnEnding() {
+        assertThat(YamlLineEditor.setScalar(MIXED, "anticheat.anti-xray.enabled", "true"))
+                .isEqualTo(MIXED.replace("enabled: false", "enabled: true"));
+        assertThat(YamlLineEditor.setScalar(MIXED, "last", "2")).isEqualTo(MIXED.replace("last: 1", "last: 2"));
+        String noFinalNewline = "a: 1\r\nb: 2\nc: 3";
+        assertThat(YamlLineEditor.setScalar(noFinalNewline, "c", "4")).isEqualTo("a: 1\r\nb: 2\nc: 4");
+    }
+
+    @Test
+    void insertingIntoASectionKeepsEveryLinesOwnEnding() {
+        assertThat(YamlLineEditor.setScalar(MIXED, "anticheat.anti-xray.extra", "5", true))
+                .isEqualTo(MIXED.replace("    engine-mode: 1\n", "    engine-mode: 1\n    extra: 5\n"));
+    }
+
+    @Test
+    void appendingAtTheEndKeepsEveryLinesOwnEnding() {
+        assertThat(YamlLineEditor.setScalar(MIXED, "setup.completed", "true", true))
+                .isEqualTo(MIXED + "setup:\r\n  completed: true\r\n");
+        assertThat(YamlLineEditor.setScalar("a: 1\r\nb: 2", "c", "3", true)).isEqualTo("a: 1\r\nb: 2\r\nc: 3\r\n");
+        assertThat(YamlLineEditor.setScalar("a:\r\n  b: 2", "a.c", "3", true)).isEqualTo("a:\r\n  b: 2\r\n  c: 3");
+    }
+
     @Test
     void rejectsMissingKeysSectionsAndUnsafeValues() {
         assertThatThrownBy(() -> YamlLineEditor.setScalar(DOC, "packet.nope.mode", "x")).isInstanceOf(IllegalArgumentException.class);

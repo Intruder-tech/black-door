@@ -78,6 +78,16 @@ connections) and `packet.max-sessions` (restart required).
 | `blackdoor.gui.edit` | Change settings in the panel |
 | `blackdoor.command.checks` / `blackdoor.command.player` | Text views |
 
+**Anti X-ray switch** (Paper, Purpur and Folia only; needs `blackdoor.gui.edit`): the "Anti X-Ray" item in the
+panel turns Paper's own anti-xray on or off. If it is configured off in any loaded world, a click
+turns it on; otherwise a click turns it off. It changes only `anticheat.anti-xray.enabled` in
+`config/paper-world-defaults.yml`, and in a world's `paper-world.yml` only where that key already
+exists. Before the first change to a file a copy is kept next to it
+(`<file name>.blackdoor-backup`). The change applies after the next server restart; Black Door
+never restarts or reloads the server. Each change is audited. The panel and `/blackdoor setup`
+show both what the files say and what the server started with; the latter is kept in
+`antixray-startup.properties` in Black Door's data folder (written by Black Door, not a setting).
+
 ## 2c. Implemented in Phase 4 (so far)
 
 **`checks.yml`** exploit guards, each with `mode` (`disabled` / `monitor` / `mitigate`):

@@ -14,7 +14,10 @@ public interface Platform {
 
     BdLogger logger();
 
-    /** The plugin's own data folder. All files Black Door writes live below it. */
+    /**
+     * The plugin's own data folder. All files Black Door writes live below it, except Paper's
+     * anti-xray switch (see {@link #antiXrayFiles()}).
+     */
     Path dataDirectory();
 
     ProtocolBridge protocol();
@@ -25,6 +28,15 @@ public interface Platform {
     /** Security-relevant server settings, for /blackdoor setup. Unknown by default. */
     default SecurityFacts securityFacts() {
         return SecurityFacts.UNKNOWN;
+    }
+
+    /**
+     * Paper's anti-xray files for the loaded worlds, so the control panel can switch it. Call on
+     * the server thread; the returned object does its file work on whichever thread uses it.
+     * Empty where Black Door cannot switch it.
+     */
+    default java.util.Optional<io.github.intruder_tech.blackdoor.core.antixray.AntiXrayFiles> antiXrayFiles() {
+        return java.util.Optional.empty();
     }
 
     /**

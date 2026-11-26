@@ -26,6 +26,11 @@ record BukkitPlatform(PlatformInfo info, PlatformScheduler scheduler, BdLogger l
     }
 
     @Override
+    public Optional<io.github.intruder_tech.blackdoor.core.antixray.AntiXrayFiles> antiXrayFiles() {
+        return BukkitEnvironment.antiXrayFiles();
+    }
+
+    @Override
     public SecurityFacts securityFacts() {
         return BukkitEnvironment.securityFacts();
     }

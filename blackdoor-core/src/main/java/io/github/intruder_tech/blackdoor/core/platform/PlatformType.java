@@ -19,4 +19,9 @@ public enum PlatformType {
     public boolean isProxy() {
         return proxy;
     }
+
+    /** Paper and the servers built on it. */
+    public boolean isPaperFamily() {
+        return this == PAPER || this == PURPUR || this == FOLIA;
+    }
 }
