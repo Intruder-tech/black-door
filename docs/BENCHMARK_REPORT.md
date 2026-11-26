@@ -101,3 +101,21 @@ section), with:
   it exists.
 - Explored terrain is around spawn; caves and builds in long-running worlds may raise the share of
   non-uniform sections.
+
+---
+
+## 2. Connection guard overhead (Phase 4)
+
+Handshake plus login for unknown addresses during a flood, 10,000 addresses, 100,000 connections,
+third round after warm-up. `./gradlew :blackdoor-benchmarks:networkOverhead`, 2026-11-26, same machine
+as section 1. A plain timing loop, not JMH, so treat the figures as approximate.
+
+| Players online | Before indexing by address | After |
+|---|---|---|
+| 0 | 0.72 us | 0.70 us |
+| 100 | 1.13 us | 0.49 us |
+| 500 | 4.72 us | 0.56 us |
+| 2,000 | 10.91 us | 0.40 us |
+
+Budget: 5 us per new connection (PERFORMANCE_BUDGET.md). Not measured: the cost of the platform
+events around it, or memory under a large flood.

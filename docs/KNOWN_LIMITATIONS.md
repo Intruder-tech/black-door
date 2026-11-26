@@ -35,6 +35,8 @@
   still needs: server changes (effects, velocity, abilities, blocks) applied when the client
   acknowledges them; the client's own block placing and breaking; the worn chest item, because a
   claimed elytra flight gets no verdict; and teleport confirmations matched by id.
+- Anti X-ray is Paper's own feature. Black Door only reports whether it is on, read from the
+  configuration files, so a change takes effect (and shows correctly) after a restart.
 - Block shapes for movement prediction come from the running server: none on servers without
   `getCollisionShape`, none for blocks whose shape depends on position or player (scaffolding,
   powder snow, bamboo, pointed dripstone, moving pistons, shulker boxes), and clients older than

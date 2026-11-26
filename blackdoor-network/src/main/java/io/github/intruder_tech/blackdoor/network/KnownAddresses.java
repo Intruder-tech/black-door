@@ -3,8 +3,10 @@ package io.github.intruder_tech.blackdoor.network;
 import io.github.intruder_tech.blackdoor.common.time.TimeSource;
 
 import java.net.InetAddress;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -21,6 +23,8 @@ final class KnownAddresses {
 
     private final TimeSource time;
     private final Map<UUID, Online> online = new HashMap<>();
+    /** The same players by address, so a login is not compared with everyone online. */
+    private final Map<InetAddress, List<Online>> byAddress = new HashMap<>();
     private final Map<InetAddress, Boolean> remembered = new LinkedHashMap<>(64, 0.75f, true);
 
     KnownAddresses(TimeSource time) {
@@ -29,13 +33,16 @@ final class KnownAddresses {
 
     synchronized void joined(UUID id, InetAddress address) {
         if (id != null && address != null) {
-            online.put(id, new Online(address, time.nanoTime()));
+            Online player = new Online(address, time.nanoTime());
+            forget(online.put(id, player));
+            byAddress.computeIfAbsent(address, a -> new ArrayList<>(1)).add(player);
         }
     }
 
     /** A leave without a recorded join changes nothing. */
     synchronized void left(UUID id, int maxKnown) {
         Online player = id == null ? null : online.remove(id);
+        forget(player);
         if (player == null || !stayed(player)) {
             return;
         }
@@ -51,12 +58,24 @@ final class KnownAddresses {
         if (remembered.get(address) != null) {
             return true;
         }
-        // Linear in players online, which the server already bounds.
-        return online.values().stream().anyMatch(p -> p.address().equals(address) && stayed(p));
+        return byAddress.getOrDefault(address, List.of()).stream().anyMatch(this::stayed);
     }
 
     synchronized int size() {
         return remembered.size();
+    }
+
+    private void forget(Online player) {
+        if (player == null) {
+            return;
+        }
+        List<Online> there = byAddress.get(player.address());
+        if (there != null) {
+            there.remove(player);
+            if (there.isEmpty()) {
+                byAddress.remove(player.address());
+            }
+        }
     }
 
     private boolean stayed(Online player) {

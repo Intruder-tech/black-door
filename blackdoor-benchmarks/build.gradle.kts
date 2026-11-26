@@ -13,3 +13,15 @@ tasks.register<JavaExec>("worldViewSpike") {
     jvmArgs("-Xms2g", "-Xmx2g", "-XX:+UseG1GC")
     args(providers.gradleProperty("regions").getOrElse("missing"))
 }
+
+/** Usage: ./gradlew :blackdoor-benchmarks:networkOverhead */
+tasks.register<JavaExec>("networkOverhead") {
+    group = "verification"
+    description = "Times the connection guard per new connection."
+    classpath = sourceSets.main.get().runtimeClasspath
+    mainClass = "io.github.intruder_tech.blackdoor.benchmarks.network.NetworkOverhead"
+}
+
+dependencies {
+    implementation(project(":blackdoor-network"))
+}

@@ -88,7 +88,7 @@ final class BukkitEnvironment {
             // unreadable configuration: leave unknown
         }
         return new io.github.intruder_tech.blackdoor.core.platform.SecurityFacts(online, bungee, allInterfaces,
-                velocity, weakSecret);
+                velocity, weakSecret, worldsWithoutAntiXray());
     }
 
     /** Paper 1.20+ and Folia expose region/entity schedulers on {@link Bukkit}. */
@@ -113,6 +113,30 @@ final class BukkitEnvironment {
             return true;
         } catch (ClassNotFoundException | LinkageError e) {
             return false;
+        }
+    }
+
+    /** Loaded worlds where the anti-xray of Paper is off; null when this server has no such setting. */
+    private static java.util.List<String> worldsWithoutAntiXray() {
+        try {
+            File defaults = new File("config/paper-world-defaults.yml");
+            if (!defaults.isFile()) {
+                return null;
+            }
+            String key = "anticheat.anti-xray.enabled";
+            boolean byDefault = YamlConfiguration.loadConfiguration(defaults).getBoolean(key, false);
+            java.util.List<String> without = new java.util.ArrayList<>();
+            for (org.bukkit.World world : Bukkit.getWorlds()) {
+                File override = new File(world.getWorldFolder(), "paper-world.yml");
+                boolean on = override.isFile()
+                        ? YamlConfiguration.loadConfiguration(override).getBoolean(key, byDefault) : byDefault;
+                if (!on) {
+                    without.add(world.getName());
+                }
+            }
+            return without;
+        } catch (RuntimeException | LinkageError e) {
+            return null;
         }
     }
 }

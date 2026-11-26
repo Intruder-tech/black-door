@@ -113,7 +113,7 @@ public final class BlackDoorMenus {
                             "", "&eClick to open"),
                     s -> s.show(packetChecks())));
             items.add(locked(14, Icon.LOCKED_COMBAT, "Movement & combat checks", "Fly, speed, reach, kill aura...", "Phase 3"));
-            items.add(locked(16, Icon.LOCKED_XRAY, "Anti X-Ray / ESP", "Hide ores and players from cheaters", "Phase 4"));
+            items.add(antiXrayItem(16));
             Setting joins = settings.find(SettingsService.NETWORK_MODE).orElseThrow();
             String joinMode = settings.current(joins);
             Setting login = settings.find(SettingsService.AUTH_ENABLED).orElseThrow();
@@ -292,6 +292,27 @@ public final class BlackDoorMenus {
             lore.add("&e! " + Text.escape(reason));
         }
         return lore;
+    }
+
+    /** Status only: Paper hides the ores, Black Door shows whether that is switched on. */
+    private MenuItem antiXrayItem(int slot) {
+        List<String> without = engine.platform().securityFacts().worldsWithoutAntiXray();
+        String state = without == null ? "&8Unknown" : without.isEmpty() ? "&aOn" : "&eOff";
+        List<String> lore = new ArrayList<>();
+        lore.add("&7Hides ores from X-ray cheats.");
+        lore.add("&7This is a feature of Paper itself.");
+        lore.add("");
+        if (without == null) {
+            lore.add("&8This server does not report it (Paper only).");
+        } else if (without.isEmpty()) {
+            lore.add("&aOn in every world.");
+        } else {
+            lore.add("&eOff in: &f" + Text.escape(String.join(", ", without)));
+            lore.add("&7Set &fanticheat.anti-xray.enabled: true");
+            lore.add("&7in &fconfig/paper-world-defaults.yml");
+            lore.add("&7and restart the server.");
+        }
+        return new MenuItem(slot, Icon.LOCKED_XRAY, "&fAnti X-Ray &8| " + state, lore, null);
     }
 
     private static MenuItem locked(int slot, Icon icon, String name, String what, String phase) {

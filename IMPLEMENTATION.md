@@ -357,8 +357,14 @@ mode"). Nothing is refused for `warmup-seconds` (300) after start. 246 unit test
 attack mode started, strangers were mostly refused, the known address got in, attack mode ended.
 **Not verified:** a real proxy, a distributed flood from real addresses, or 26.3.
 
-**Remaining in Phase 4:** bot scoring, quarantine, anti-xray, edge agent.
-See docs/KNOWN_LIMITATIONS.md.
+**4.8 wrap-up:** anti-xray status of Paper in setup and the GUI (Black Door hides no ores itself);
+spoof and flood tests with a real Velocity and BungeeCord on this PC (direct and forged joins
+refused, proxy joins work, bot flood mode admits a known address); connection guard measured at
+about 0.5 us per connection (docs/BENCHMARK_REPORT.md section 2).
+
+**Phase 4 complete** against docs/ROADMAP.md. Quarantine belongs to Phase 5 and the edge agent to
+"Later / Optional". Not verified: real online-mode accounts through a proxy, a distributed attack
+from real addresses. See docs/KNOWN_LIMITATIONS.md.
 
 ## 11. Next Steps
 

@@ -86,7 +86,8 @@ class MenuTest {
         assertThat(s.shown.itemAt(10).orElseThrow().name()).contains("Protection").contains("OFF");
         assertThat(s.shown.items()).filteredOn(i -> i.name().contains("coming soon"))
                 .allSatisfy(i -> assertThat(i.action()).isNull())
-                .anySatisfy(i -> assertThat(i.name()).contains("X-Ray"));
+                .anySatisfy(i -> assertThat(i.name()).contains("Movement"));
+        assertThat(s.shown.itemAt(16).orElseThrow().name()).contains("X-Ray").contains("Unknown");
         assertThat(s.shown.itemAt(4)).as("setup reminder").isPresent();
     }
 

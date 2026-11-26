@@ -103,6 +103,7 @@ public final class SetupCommand implements Subcommand {
             });
             SecurityFacts facts = engine.platform().securityFacts();
             forwarding(facts, lines);
+            antiXray(facts, lines);
         } else {
             lines.add(ok("Proxy: join limits follow network.yml (mode " + engine.networkSettings().mode()
                     .name().toLowerCase(Locale.ROOT) + ")"));
@@ -143,6 +144,19 @@ public final class SetupCommand implements Subcommand {
         }
         if (Boolean.FALSE.equals(facts.onlineMode()) && Boolean.TRUE.equals(facts.boundToAllInterfaces())) {
             lines.add(warn("server-ip is empty (listens on every interface); bind it to your private network."));
+        }
+    }
+
+    /** Black Door does not hide ores itself; it checks that Paper does. */
+    private static void antiXray(SecurityFacts facts, List<String> lines) {
+        List<String> without = facts.worldsWithoutAntiXray();
+        if (without == null) {
+            lines.add(warn("Could not read the anti-xray setting (Paper only)."));
+        } else if (without.isEmpty()) {
+            lines.add(ok("Paper anti-xray is on in every world"));
+        } else {
+            lines.add(warn("Paper anti-xray is off in: " + String.join(", ", without) + ". Set anticheat.anti-xray.enabled:"
+                    + " true in config/paper-world-defaults.yml and restart."));
         }
     }
 

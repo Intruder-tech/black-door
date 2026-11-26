@@ -50,6 +50,21 @@ class ForwardingSetupTest {
                 .contains("allowed-proxies");
     }
 
+    private static SecurityFacts antiXray(java.util.List<String> without) {
+        return new SecurityFacts(true, false, false, false, false, without);
+    }
+
+    @Test
+    void antiXrayOnInEveryWorldPasses() throws Exception {
+        assertThat(setup(antiXray(java.util.List.of()))).contains("anti-xray is on in every world");
+    }
+
+    @Test
+    void worldsWithoutAntiXrayAreNamedWithTheFix() throws Exception {
+        assertThat(setup(antiXray(java.util.List.of("world", "world_nether"))))
+                .contains("off in: world, world_nether").contains("paper-world-defaults.yml");
+    }
+
     @Test
     void offlineWithoutAnyForwardingFails() throws Exception {
         assertThat(setup(new SecurityFacts(false, false, false, false, false)))
