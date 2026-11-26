@@ -1,0 +1,41 @@
+# Black Door - connection protection (join and ping floods)
+# Documentation: docs/NETWORK_SECURITY.md
+#
+# This cannot absorb large bandwidth (DDoS) attacks. Only your hosting provider can.
+#
+# Do not edit config-version; Black Door uses it to migrate this file safely.
+config-version: 1
+
+# disabled = off
+# monitor  = log and count only (default, recommended)
+# mitigate = close offending connections; only takes effect when config.yml mode is "enforce"
+mode: monitor
+
+# Per IP address: "burst" is the short-term allowance, "per-second" the sustained rate.
+# Keep these generous: many players can share one address (schools, mobile networks, VPNs).
+connections:
+  burst: 30
+  per-second: 3
+pings:
+  burst: 30
+  per-second: 5
+logins:
+  burst: 10
+  per-second: 1
+
+# Longest server address a client may send in the handshake. Not checked behind BungeeCord forwarding.
+max-hostname-length: 255
+
+# Memory bound. When full, the least recently seen address is forgotten.
+max-tracked-addresses: 50000
+
+# Never rate-limit local and private network addresses (proxies on the same machine or LAN).
+exempt-private-addresses: true
+
+# Extra addresses to never rate-limit, comma separated, for example "203.0.113.7, 203.0.113.8".
+# If your proxy reaches this server over a public address, list it here. IPv6 addresses must be
+# written in full form.
+exempt-addresses: ""
+
+# Per-address limits are switched off automatically when BungeeCord forwarding is enabled
+# in spigot.yml, because every player then arrives from the proxy's address.

@@ -40,6 +40,22 @@ public sealed interface ServerboundPacket {
     record TransactionResponse(int id, boolean legacy) implements ServerboundPacket {
     }
 
+    /** Custom payload ("plugin message") in the play state. {@code length} is the data size in bytes. */
+    record PluginMessage(String channel, int length) implements ServerboundPacket {
+    }
+
+    /** Book edit or signing (1.13+). Title length is 0 when the book is not being signed. */
+    record BookEdit(int pages, int longestPage, int titleLength) implements ServerboundPacket {
+    }
+
+    /** Sign text submitted by the client. */
+    record SignUpdate(int lines, int longestLine) implements ServerboundPacket {
+    }
+
+    /** Creative-mode inventory action. {@code amount} is 0 for an empty stack. */
+    record CreativeItem(int slot, int amount) implements ServerboundPacket {
+    }
+
     /** Any other packet; only counted for rate and size. */
     record Other(String typeName) implements ServerboundPacket {
     }

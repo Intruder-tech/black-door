@@ -13,7 +13,11 @@ public enum PacketCheck {
     TELEPORT_CONFIRM(Confidence.DETERMINISTIC, "Confirming a teleport the server never sent"),
     OVERSIZED(Confidence.DETERMINISTIC, "Packet or text larger than any legitimate client sends"),
     TRANSACTION(Confidence.DETERMINISTIC, "Reply to a connection check that was never sent, or replies out of order"),
-    FLOOD(Confidence.HEURISTIC, "Packet rate above configured limits");
+    FLOOD(Confidence.HEURISTIC, "Packet rate above configured limits"),
+    PAYLOAD(Confidence.HEURISTIC, "Plugin message or client brand larger than configured limits"),
+    BOOK(Confidence.HEURISTIC, "Book with more pages or longer text than configured limits"),
+    SIGN(Confidence.DETERMINISTIC, "Sign text with too many or too long lines"),
+    CREATIVE_ITEM(Confidence.HEURISTIC, "Creative inventory action with an impossible slot, amount or size");
 
     private final Confidence confidence;
     private final String description;

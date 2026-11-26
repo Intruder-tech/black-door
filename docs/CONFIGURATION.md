@@ -78,6 +78,22 @@ connections) and `packet.max-sessions` (restart required).
 | `blackdoor.gui.edit` | Change settings in the panel |
 | `blackdoor.command.checks` / `blackdoor.command.player` | Text views |
 
+## 2c. Implemented in Phase 4 (so far)
+
+**`checks.yml`** exploit guards, each with `mode` (`disabled` / `monitor` / `mitigate`):
+
+| Key under `packet.` | Limits (default) |
+|---|---|
+| `payload` | `max-bytes` (32767), `max-channel-length` (128), `max-brand-bytes` (256) |
+| `book` | `max-pages` (100), `max-page-length` (8192), `max-title-length` (32) |
+| `sign` | `max-line-length` (384); more than 4 lines is always flagged |
+| `creative-item` | `max-amount` (99), `max-bytes` (65536); slots outside -1..45 are always flagged |
+
+**`network.yml`** connection protection: `mode`; per-address `connections`, `pings`, `logins`
+(`burst`, `per-second`); `max-hostname-length`; `max-tracked-addresses`;
+`exempt-private-addresses`; `exempt-addresses`. Limit changes apply to addresses not yet tracked.
+Quarantine, adaptive mode and forwarding expectations are not implemented yet.
+
 ## 3. Profiles (intent)
 
 | Profile | Intent |

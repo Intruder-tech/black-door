@@ -142,8 +142,40 @@ public final class PacketSecurityEngine implements PacketHandler {
             if (t.length() > limit) {
                 drop |= report(session, cfg, PacketCheck.OVERSIZED, t.kind() + " length " + t.length() + " > " + limit);
             }
+        } else {
+            drop |= exploits(session, cfg, wireSize, packet);
         }
         return drop;
+    }
+
+    /** Exploit guards (docs/EXPLOIT_PREVENTION.md). Details carry numbers only, never client text. */
+    private boolean exploits(PlayerSession session, PacketSettings cfg, int wireSize, ServerboundPacket packet) {
+        PacketSettings.ExploitLimits max = cfg.exploits();
+        if (packet instanceof ServerboundPacket.PluginMessage p) {
+            boolean brand = p.channel().equals("minecraft:brand") || p.channel().equals("MC|Brand");
+            int limit = brand ? max.brandBytes() : max.payloadBytes();
+            if (p.channel().length() > max.channelLength() || p.length() > limit) {
+                return report(session, cfg, PacketCheck.PAYLOAD, (brand ? "brand" : "plugin message")
+                        + " channel length " + p.channel().length() + ", data " + p.length() + " bytes");
+            }
+        } else if (packet instanceof ServerboundPacket.BookEdit b) {
+            if (b.pages() > max.bookPages() || b.longestPage() > max.pageLength() || b.titleLength() > max.titleLength()) {
+                return report(session, cfg, PacketCheck.BOOK, "pages " + b.pages() + ", longest page "
+                        + b.longestPage() + ", title " + b.titleLength());
+            }
+        } else if (packet instanceof ServerboundPacket.SignUpdate s) {
+            if (s.lines() > 4 || s.longestLine() > max.signLineLength()) {
+                return report(session, cfg, PacketCheck.SIGN, "lines " + s.lines() + ", longest " + s.longestLine());
+            }
+        } else if (packet instanceof ServerboundPacket.CreativeItem c) {
+            // Slot -1 drops the item; 45 is the off hand.
+            if (c.slot() < -1 || c.slot() > 45 || c.amount() < 0 || c.amount() > max.creativeAmount()
+                    || wireSize > max.creativeBytes()) {
+                return report(session, cfg, PacketCheck.CREATIVE_ITEM,
+                        "slot " + c.slot() + ", amount " + c.amount() + ", " + wireSize + " bytes");
+            }
+        }
+        return false;
     }
 
     private boolean movement(PlayerSession session, PacketSettings cfg, int wireSize, ServerboundPacket.Movement m) {

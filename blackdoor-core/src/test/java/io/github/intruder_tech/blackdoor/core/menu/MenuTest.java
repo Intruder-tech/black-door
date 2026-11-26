@@ -107,6 +107,15 @@ class MenuTest {
     }
 
     @Test
+    void checkIconsAreCentredAndStayOffTheEdges() {
+        FakeSession s = new FakeSession(RecordingSender.admin(), engine.menus().packetChecks());
+        assertThat(s.shown.items())
+                .filteredOn(i -> i.icon() == Icon.CHECK_MONITOR)
+                .extracting(MenuItem::slot)
+                .containsExactly(10, 11, 12, 13, 14, 15, 16, 20, 21, 22, 23, 24);
+    }
+
+    @Test
     void viewersWithoutEditPermissionCannotChangeSettings() {
         RecordingSender viewer = new RecordingSender("Mod", Set.of("blackdoor.command.gui"));
         FakeSession s = new FakeSession(viewer, engine.menus().packetChecks());

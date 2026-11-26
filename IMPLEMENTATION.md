@@ -5,12 +5,15 @@
 > blocked, and what needs the owner's decision.
 
 **Last updated:** 2026-11-26
-**Current phase:** Phase 2 — Packet inspection, player state, physics
-**Phase status:** **Milestones 2.1, 2.2, 2.3 and 2.4a done** (packet security engine, player state, findings ledger, transactions and latency,
-in-game control panel and `/blackdoor setup`). Milestone 2.4b (physics core) not started (§12).
-**Protections active:** 8 packet checks (7 deterministic, 1 heuristic), **monitor mode by default**
-(they log findings; they block only if you set a check to `mitigate` and the global mode to `enforce`).
-**Next gate:** A real player session to exercise packet checks and the GUI (§2, B-4), then milestone 2.2.
+**Current phase:** Phase 4 — Exploit and network protection (owner override: started before Phase 2
+and 3 are complete)
+**Phase status:** Milestones 2.1, 2.2, 2.3 and 2.4a done. **2.4b (physics) paused by the owner** after
+step 1 (recorder). Phase 4: milestones 4.1 (exploit guards, first set) and 4.2 (backend connection
+protection) built, not yet committed (§14).
+**Protections active:** 12 packet checks and join/ping flood protection, **monitor mode by default**
+(they log findings; they block only if set to `mitigate` and the global mode is `enforce`).
+**Next gate:** Owner review of 4.1/4.2 and a real player session (false-positive check for books,
+signs, creative items and mod messages).
 
 ---
 
@@ -22,7 +25,7 @@ in-game control panel and `/blackdoor setup`). Milestone 2.4b (physics core) not
 | 1 | Core architecture, build, adapters, protocol abstraction, config | **Done** | 2026-11-26 | 2026-11-26 (owner: "approved, proceed with Phase 2") |
 | 2 | Packet inspection, player state, physics | **In progress** (2.1 done) | 2026-11-26 | — |
 | 3 | Combat / movement / inventory / interaction detections | Not started | — | — |
-| 4 | Exploits, app-layer network protection, proxies | Not started | — | — |
+| 4 | Exploits, app-layer network protection, proxies | **In progress** (4.1, 4.2; §14) | 2026-11-26 | — |
 | 5 | Behavior analysis, correlation, enforcement | Not started | — | — |
 | 6 | Storage, administration, telemetry, developer API | Not started | — | — |
 | 7 | Cross-version testing, security audit, optimization | Not started | — | — |
@@ -238,8 +241,8 @@ onboarding in §9.
 | 2.1 | Packet security engine, player state, findings ledger, PacketEvents listener, `checks.yml`; **plus (owner request) `/blackdoor setup` and the in-game GUI** | **Done 2026-11-26** | See §13 |
 | 2.2 | Transaction manager (Ping/Pong and window confirmation), entity tracker, outbound velocity tracking | **Done 2026-11-26** | Heartbeat every 50 ms with reserved ids (ping: `[MIN_INT, MIN_INT+2^24)`, legacy window confirmation: `[-32768, -16385]`); replies to our own pings are consumed; new check `packet.transaction`; entity tracker (cap 512/player); velocity queue tied to acknowledgement. Live test (owner, 26.3 client, ~7 min): 18,036 packets, **ping 2 ms / jitter 1 ms measured**, 125 entities tracked, 0 findings, 0 errors. Missing `transaction` key auto-inserted into an old `checks.yml`. Effect/attribute tracking moved to 2.4 (needed only by physics). Not covered: legacy window-confirmation path with a real 1.8 client; other plugins using overlapping ping ids. |
 | 2.3 | World-view memory spike (OD-3) with measured heap numbers | **Done 2026-11-26** | Real 26.3 terrain (609 chunks). Measured per player at view distance 10: block copy 9.99 MiB, collision-shape copy 2.45 MiB, shared cache when players are together 0.08 MiB. Content de-duplication saves only 1%. **Decision (ADR-017):** shared, position-keyed collision cache, per-player overlay, simulation radius 3 chunks (≈0.27 MiB/player worst case), memory budget. Build cost 9.1 µs/section. Full report: docs/BENCHMARK_REPORT.md §1 |
-| 2.4a | World view (ADR-017): shared position-keyed collision cache, per-player view and pending-change overlay, memory budget, PacketEvents chunk/block-change translation, coarse collision classifier | **Done 2026-11-26 (unit-tested; live check pending)** | New module `blackdoor-world`; classes EMPTY/FULL/PARTIAL/FLUID/SPECIAL (PARTIAL/SPECIAL mean "no verdict" until an exact shape registry exists); 1.8-era servers without world names use private per-player namespaces; budget `performance.world-memory-mb` (default 256) |
-| 2.4b | Physics core (walk/jump/gravity/friction/collisions/effects/knockback) for 1.8.8, latest 1.21.x, latest 26.x, exact shape registry, golden-trace harness | **In progress** — step 1 done: golden-trace recorder (`/blackdoor record <player> [seconds]`, JSON lines in `traces/`, max 300 s / 200k events, audited). Next: owner records traces; then exact shape registry and physics core replayed against the traces | Needs golden traces from real clients (B-5) |
+| 2.4a | World view (ADR-017): shared position-keyed collision cache, per-player view and pending-change overlay, memory budget, PacketEvents chunk/block-change translation, coarse collision classifier | **Done 2026-11-26** (live check: 213 chunks, 1.3 of 256 MiB, 1,418 packets, 0 findings) | New module `blackdoor-world`; classes EMPTY/FULL/PARTIAL/FLUID/SPECIAL (PARTIAL/SPECIAL mean "no verdict" until an exact shape registry exists); 1.8-era servers without world names use private per-player namespaces; budget `performance.world-memory-mb` (default 256) |
+| 2.4b | Physics core (walk/jump/gravity/friction/collisions/effects/knockback) for 1.8.8, latest 1.21.x, latest 26.x, exact shape registry, golden-trace harness | **Paused 2026-11-26** — step 1 done: golden-trace recorder (`/blackdoor record <player> [seconds]`, JSON lines in `traces/`, max 300 s / 200k events, audited). Three traces recorded, but they lack terrain, sprint/sneak/key input, effects, attributes and teleport destination, so they cannot test physics. On resume: capture terrain from chunk packets (proposed) and re-record | Needs golden traces from real clients (B-5) |
 
 ## 13. Milestone 2.1 — What Was Built and Verified
 
@@ -292,8 +295,39 @@ mapped like interact-attack.
 - **Not verified yet:** packet inspection of real player traffic, GUI rendering and clicks in a
   real client, the inspection-time budget under load (B-4).
 
+## 14. Phase 4 — Built So Far (2026-11-26)
+
+**Owner play-test (2026-11-26, Paper 26.3, monitor mode):** books, signs and creative items used
+normally with no findings; GUI entries confirmed. The owner asked for aligned check icons; the
+check page now centres its rows (test in `MenuTest`; new layout not yet confirmed in game).
+No modded or hacked client has been used, so blocking of a real attack is unverified.
+
+**4.1 Exploit guards** (new checks in `checks.yml`, all `monitor`, with GUI entries):
+`packet.payload` (plugin messages, brand), `packet.book`, `packet.sign`, `packet.creative-item`.
+Ids use the `packet.` prefix rather than the planned `exploit.` names in EXPLOIT_PREVENTION.md.
+
+**4.2 Connection protection** (new module `blackdoor-network`, `network.yml`, GUI toggle, status
+row): per-address limits for handshakes, status pings and logins; hostname length and login name
+validation; private addresses exempt; per-address limits off behind BungeeCord forwarding.
+
+**Verification:**
+- `./gradlew build verifyModuleGraph verifySourceRules` green; 187 unit tests, 0 failures.
+- Live, copy of Paper 26.3 test server, scripted local probe (60 pings, 21 logins):
+  defaults answered all (localhost exempt); with localhost counted, monitor answered all and logged
+  findings; mitigate + enforce answered 23 of 60 pings and 0 logins (58 refused).
+- The live probe found a defect the unit tests missed: the packet listener never called the
+  pre-login handler. Fixed and re-verified. No automated test covers that listener path.
+- **Not verified:** exploit guards against a modded or hacked client, proxies, Folia and legacy
+  servers with the new code.
+
+**Remaining in Phase 4:** limits on Velocity/BungeeCord, forwarding validation, item data
+structure limits, creative game-mode check, bot scoring, quarantine, adaptive mode, anti-xray,
+edge agent. See docs/KNOWN_LIMITATIONS.md.
+
 ## 11. Next Steps
 
+0. Play-test 4.1 with a modded client in monitor mode. Next Phase 4 candidates: connection
+   limits on Velocity/BungeeCord, forwarding validation.
 1. Milestone 2.4a: implement the world view decided in ADR-017 (shared position-keyed collision
    cache, overlay, simulation radius, memory budget), fed by chunk and block-change packets, plus
    a collision-shape registry generated from game data.

@@ -45,6 +45,14 @@ public final class BlackDoorMenus {
                 "Player answers Black Door's hidden pings", "wrongly - a sign of lag or timer cheats."));
         FRIENDLY.put(PacketCheck.FLOOD, new Friendly("Spam / flooding",
                 "Far more actions per second than normal", "play. Can lag the server."));
+        FRIENDLY.put(PacketCheck.PAYLOAD, new Friendly("Oversized mod data",
+                "Hidden data from the player's game or", "mods that is far too big. Can crash."));
+        FRIENDLY.put(PacketCheck.BOOK, new Friendly("Crash books",
+                "Books with too many pages or too much", "text. Used to lag or crash servers."));
+        FRIENDLY.put(PacketCheck.SIGN, new Friendly("Crash signs",
+                "Sign text longer than the game", "allows. Only hacked clients send this."));
+        FRIENDLY.put(PacketCheck.CREATIVE_ITEM, new Friendly("Illegal creative items",
+                "Creative-mode items with impossible", "amounts, slots or huge hidden data."));
     }
 
     /** Plain-language name for a check id (falls back to the id itself). */
@@ -83,7 +91,17 @@ public final class BlackDoorMenus {
                     s -> s.show(packetChecks())));
             items.add(locked(14, "Movement & combat checks", "Fly, speed, reach, kill aura...", "Phase 3"));
             items.add(locked(16, "Anti X-Ray / ESP", "Hide ores and players from cheaters", "Phase 4"));
-            items.add(locked(20, "Bot & attack protection", "Limit join floods and bot attacks", "Phase 4"));
+            Setting joins = settings.find(SettingsService.NETWORK_MODE).orElseThrow();
+            String joinMode = settings.current(joins);
+            items.add(new MenuItem(20, switch (joinMode) {
+                case "disabled" -> Icon.CHECK_DISABLED;
+                case "mitigate" -> Icon.CHECK_MITIGATE;
+                default -> Icon.CHECK_MONITOR;
+            }, "&fJoin flood protection &8| " + modeLabel(joinMode),
+                    List.of("&7Limits how fast one address can", "&7join or ping your server.", "",
+                            "&7Now: " + modeLabel(joinMode) + " &8- " + modeMeaning(joinMode),
+                            "&8Cannot stop large DDoS attacks.", "", "&eClick to change: &8Off > &aWatch &8> &cBlock"),
+                    s -> cycle(s, joins, "Join flood protection is now " + plainMode(settings.next(joins)))));
             items.add(new MenuItem(22, Icon.INFO, "&fStatus", statusLore(), null));
             items.add(new MenuItem(24, Icon.RELOAD, "&fReload settings",
                     List.of("&7Use this after editing the config", "&7files by hand.", "", "&eClick to reload"),
@@ -102,7 +120,7 @@ public final class BlackDoorMenus {
             List<MenuItem> items = new ArrayList<>();
             Map<String, Long> counts = engine.ledger().map(l -> l.countsByCheck()).orElse(Map.of());
             boolean on = "enforce".equals(settings.current(settings.find(SettingsService.GLOBAL_MODE).orElseThrow()));
-            int slot = 10;
+            int index = 0;
             for (PacketCheck check : PacketCheck.values()) {
                 Setting setting = settings.find(check.id()).orElseThrow();
                 String current = settings.current(setting);
@@ -124,7 +142,8 @@ public final class BlackDoorMenus {
                 lore.add("");
                 lore.add("&eClick to change: &8Off > &aWatch &8> &cBlock");
                 lore.add("&8" + check.id());
-                items.add(new MenuItem(slot++, icon, "&f" + f.name() + " &8| " + modeLabel(current), lore,
+                int slot = centredSlot(index++, PacketCheck.values().length);
+                items.add(new MenuItem(slot, icon, "&f" + f.name() + " &8| " + modeLabel(current), lore,
                         s -> cycle(s, setting, f.name() + " is now " + plainMode(settings.next(setting)))));
             }
             items.add(new MenuItem(27, Icon.INFO, "&fWhat do the modes mean?",
@@ -133,6 +152,13 @@ public final class BlackDoorMenus {
             items.add(new MenuItem(31, Icon.BACK, "&7Back", List.of(), s -> s.show(main())));
             return new Menu("Black Door - Cheat checks", 4, items);
         };
+    }
+
+    /** Rows of up to 7 starting on the second row, each centred so the edge columns stay empty. */
+    private static int centredSlot(int index, int total) {
+        int row = index / 7;
+        int inRow = Math.min(7, total - row * 7);
+        return 9 * (row + 1) + (9 - inRow) / 2 + index % 7;
     }
 
     private void cycle(MenuSession session, Setting setting, String successMessage) {

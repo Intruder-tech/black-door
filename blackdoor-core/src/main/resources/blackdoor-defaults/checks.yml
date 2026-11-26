@@ -51,5 +51,26 @@ packet:
     total:
       burst: 1000
       per-second: 500
+  # Plugin messages (mod and client data). Raise max-bytes if a mod you allow needs more.
+  payload:
+    mode: monitor
+    max-bytes: 32767
+    max-channel-length: 128
+    max-brand-bytes: 256
+  # Book edits with too many pages or too much text.
+  book:
+    mode: monitor
+    max-pages: 100
+    max-page-length: 8192
+    max-title-length: 32
+  # Sign text with more than 4 lines or very long lines.
+  sign:
+    mode: monitor
+    max-line-length: 384
+  # Creative-mode inventory actions. Raise limits if plugins give players large custom items.
+  creative-item:
+    mode: monitor
+    max-amount: 99
+    max-bytes: 65536
   # Maximum number of connections tracked at once (memory bound). Restart required.
   max-sessions: 5000

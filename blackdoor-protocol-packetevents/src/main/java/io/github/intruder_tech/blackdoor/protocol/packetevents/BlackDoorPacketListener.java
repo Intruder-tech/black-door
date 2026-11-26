@@ -35,6 +35,7 @@ final class BlackDoorPacketListener implements PacketListener {
         try {
             ConnectionState state = PacketTranslator.state(event.getConnectionState());
             if (state != ConnectionState.PLAY) {
+                preLogin(event);
                 return;
             }
             ConnectionInfo info = info(event.getUser(), event.getChannel());
@@ -47,6 +48,33 @@ final class BlackDoorPacketListener implements PacketListener {
             }
         } catch (RuntimeException e) {
             translationErrors.increment();
+        }
+    }
+
+    /** Handshake, status ping and login start. A refused connection is closed. */
+    private void preLogin(PacketReceiveEvent event) {
+        var type = event.getPacketType();
+        io.github.intruder_tech.blackdoor.protocol.packet.PreLogin packet;
+        if (type == PacketType.Handshaking.Client.HANDSHAKE) {
+            String host = new com.github.retrooper.packetevents.wrapper.handshaking.client
+                    .WrapperHandshakingClientHandshake(event).getServerAddress();
+            packet = new io.github.intruder_tech.blackdoor.protocol.packet.PreLogin.Handshake(host == null ? 0 : host.length());
+        } else if (type == PacketType.Status.Client.REQUEST) {
+            packet = new io.github.intruder_tech.blackdoor.protocol.packet.PreLogin.StatusRequest();
+        } else if (type == PacketType.Login.Client.LOGIN_START) {
+            packet = new io.github.intruder_tech.blackdoor.protocol.packet.PreLogin.LoginStart(
+                    new com.github.retrooper.packetevents.wrapper.login.client.WrapperLoginClientLoginStart(event)
+                            .getUsername());
+        } else {
+            return;
+        }
+        User user = event.getUser();
+        if (user == null || user.getAddress() == null || user.getAddress().getAddress() == null) {
+            return;
+        }
+        if (handler.onPreLogin(user.getAddress().getAddress(), packet) == PacketVerdict.DROP) {
+            event.setCancelled(true);
+            user.closeConnection();
         }
     }
 

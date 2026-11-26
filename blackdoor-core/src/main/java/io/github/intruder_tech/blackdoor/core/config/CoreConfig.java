@@ -14,7 +14,11 @@ public final class CoreConfig {
     public static final ConfigFileSpec<PacketSettings> CHECKS = new ConfigFileSpec<>(
             "checks.yml", 1, "blackdoor-defaults/checks.yml", List.of(), PacketSettings::parse);
 
-    public static final List<ConfigFileSpec<?>> ALL = List.of(GENERAL, CHECKS);
+    public static final ConfigFileSpec<io.github.intruder_tech.blackdoor.network.NetworkSettings> NETWORK =
+            new ConfigFileSpec<>("network.yml", 1, "blackdoor-defaults/network.yml", List.of(),
+                    io.github.intruder_tech.blackdoor.network.NetworkSettings::parse);
+
+    public static final List<ConfigFileSpec<?>> ALL = List.of(GENERAL, CHECKS, NETWORK);
 
     private CoreConfig() {
     }

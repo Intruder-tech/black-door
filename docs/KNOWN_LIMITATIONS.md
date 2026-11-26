@@ -29,6 +29,17 @@
 15. **Distributed botnets** with many residential IPs can evade per-IP limits; adaptive mode then
     affects legitimate joins as well.
 
+### Current implementation gaps (connection protection and exploit guards)
+
+- Connection limits run on backend servers only; the Velocity and BungeeCord plugins do not
+  apply them yet.
+- Velocity modern forwarding cannot be detected from the backend. A proxy reaching the backend
+  over a public address must be listed in `exempt-addresses`.
+- Book edits on pre-1.13 clients arrive as plugin messages and are only size-checked.
+- Client brand sent during the configuration state (1.20.2+) is not inspected.
+- Item data is limited by packet size only; nesting depth and component counts are not checked.
+- Creative actions are not yet compared with the player's actual game mode.
+
 ## Engineering
 16. **World view memory** at high player counts is unresolved (OD-3).
 17. **PacketEvents dependency** on the critical path; upgrades must be reviewed per release.

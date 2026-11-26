@@ -82,7 +82,7 @@ class PacketSecurityEngineTest {
         Map<PacketCheck, CheckMode> modes = new EnumMap<>(d.modes());
         modes.put(check, mode);
         settings.set(new PacketSettings(modes, d.maxMovementBytes(), d.maxChatLength(), d.maxCommandLength(),
-                d.maxTabCompleteLength(), d.movementRate(), d.interactRate(), d.textRate(), d.totalRate(), d.maxSessions()));
+                d.maxTabCompleteLength(), d.movementRate(), d.interactRate(), d.textRate(), d.totalRate(), d.maxSessions(), d.exploits()));
     }
 
     @Test

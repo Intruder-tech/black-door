@@ -54,6 +54,7 @@ include(
     "blackdoor-state",
     "blackdoor-world",
     "blackdoor-packets",
+    "blackdoor-network",
     "blackdoor-core",
     "blackdoor-platform-bukkit",
     "blackdoor-platform-paper",

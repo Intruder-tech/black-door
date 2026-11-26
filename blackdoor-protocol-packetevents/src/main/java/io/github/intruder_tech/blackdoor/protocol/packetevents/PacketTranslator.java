@@ -82,7 +82,40 @@ final class PacketTranslator {
         if (type == PacketType.Play.Client.TAB_COMPLETE) {
             return text(ServerboundPacket.Text.Kind.TAB_COMPLETE, new WrapperPlayClientTabComplete(event).getText());
         }
+        if (type == PacketType.Play.Client.PLUGIN_MESSAGE) {
+            var w = new com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientPluginMessage(event);
+            String channel = w.getChannelName();
+            byte[] data = w.getData();
+            return new ServerboundPacket.PluginMessage(channel == null ? "" : channel, data == null ? 0 : data.length);
+        }
+        if (type == PacketType.Play.Client.EDIT_BOOK) {
+            var w = new com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientEditBook(event);
+            java.util.List<String> pages = w.getPages();
+            String title = w.getTitle();
+            return new ServerboundPacket.BookEdit(pages == null ? 0 : pages.size(),
+                    pages == null ? 0 : longest(pages.toArray(String[]::new)), title == null ? 0 : title.length());
+        }
+        if (type == PacketType.Play.Client.UPDATE_SIGN) {
+            String[] lines = new com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientUpdateSign(event)
+                    .getTextLines();
+            return new ServerboundPacket.SignUpdate(lines == null ? 0 : lines.length, lines == null ? 0 : longest(lines));
+        }
+        if (type == PacketType.Play.Client.CREATIVE_INVENTORY_ACTION) {
+            var w = new com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientCreativeInventoryAction(event);
+            var item = w.getItemStack();
+            return new ServerboundPacket.CreativeItem(w.getSlot(), item == null || item.isEmpty() ? 0 : item.getAmount());
+        }
         return new ServerboundPacket.Other(type == null ? "unknown" : type.getName());
+    }
+
+    private static int longest(String[] values) {
+        int max = 0;
+        for (String v : values) {
+            if (v != null) {
+                max = Math.max(max, v.length());
+            }
+        }
+        return max;
     }
 
     private static ServerboundPacket.Text text(ServerboundPacket.Text.Kind kind, String value) {

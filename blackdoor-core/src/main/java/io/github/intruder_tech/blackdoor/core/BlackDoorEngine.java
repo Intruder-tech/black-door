@@ -73,6 +73,8 @@ public final class BlackDoorEngine {
     private volatile SessionRegistry sessions;
     private volatile PacketSecurityEngine packetEngine;
     private volatile boolean packetLayerAttached;
+    private volatile io.github.intruder_tech.blackdoor.protocol.packet.PacketHandler packetHandler;
+    private volatile io.github.intruder_tech.blackdoor.network.ConnectionGuard connectionGuard;
     private volatile java.util.concurrent.ScheduledExecutorService heartbeat;
 
     /** How often Black Door pings each player for latency and acknowledgement tracking. */
@@ -195,7 +197,14 @@ public final class BlackDoorEngine {
                     settings().worldMemoryMb() * 1024L * 1024L), shapes);
         }
         packetEngine.traceListener(traceRecorder);
-        packetLayerAttached = platform.protocol().attach(packetEngine);
+        boolean forwarded = Boolean.TRUE.equals(platform.securityFacts().bungeeCordForwarding());
+        io.github.intruder_tech.blackdoor.network.ConnectionGuard guard =
+                new io.github.intruder_tech.blackdoor.network.ConnectionGuard(ledger, time, this::networkSettings,
+                        () -> settings().mode() == GeneralSettings.Mode.ENFORCE, () -> forwarded);
+        connectionGuard = guard;
+        packetHandler = new GuardedPacketHandler(packetEngine, guard,
+                new RateLimitedLogger(logger, time, 3, 0.1, 16));
+        packetLayerAttached = platform.protocol().attach(packetHandler);
         if (!packetLayerAttached) {
             logger.error("Could not attach to " + platform.protocol().name() + "; packet checks are inactive.");
             return;
@@ -338,6 +347,19 @@ public final class BlackDoorEngine {
             reasons.add("could not attach to the packet library; packet checks inactive");
         }
         return reasons;
+    }
+
+    /** The handler attached to the packet library, if the packet layer was started. */
+    public Optional<io.github.intruder_tech.blackdoor.protocol.packet.PacketHandler> packetHandler() {
+        return Optional.ofNullable(packetHandler);
+    }
+
+    public Optional<io.github.intruder_tech.blackdoor.network.ConnectionGuard> connectionGuard() {
+        return Optional.ofNullable(connectionGuard);
+    }
+
+    public io.github.intruder_tech.blackdoor.network.NetworkSettings networkSettings() {
+        return config.current().get(CoreConfig.NETWORK);
     }
 
     public Optional<PacketSecurityEngine> packetEngine() {

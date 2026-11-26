@@ -15,4 +15,9 @@ public interface PacketHandler {
     void onOutbound(ConnectionInfo connection, ClientboundPacket packet);
 
     void onDisconnect(Object connectionKey);
+
+    /** @return {@link PacketVerdict#DROP} to refuse and close the connection */
+    default PacketVerdict onPreLogin(java.net.InetAddress address, PreLogin packet) {
+        return PacketVerdict.PASS;
+    }
 }
