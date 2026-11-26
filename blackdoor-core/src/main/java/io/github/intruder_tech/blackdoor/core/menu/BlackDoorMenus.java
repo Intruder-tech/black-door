@@ -3,6 +3,8 @@ package io.github.intruder_tech.blackdoor.core.menu;
 import io.github.intruder_tech.blackdoor.config.ConfigError;
 import io.github.intruder_tech.blackdoor.config.ReloadResult;
 import io.github.intruder_tech.blackdoor.core.BlackDoorEngine;
+import io.github.intruder_tech.blackdoor.core.antixray.AntiXrayStatus;
+import io.github.intruder_tech.blackdoor.core.antixray.AntiXrayStrength;
 import io.github.intruder_tech.blackdoor.core.command.Text;
 import io.github.intruder_tech.blackdoor.core.settings.SettingsService;
 import io.github.intruder_tech.blackdoor.core.settings.SettingsService.Setting;
@@ -299,9 +301,15 @@ public final class BlackDoorMenus {
     private MenuItem antiXrayItem(int slot, boolean mayChange) {
         List<String> lore = new ArrayList<>();
         lore.add("&7Hides ores from X-ray cheats.");
-        lore.add("&7This is Paper's own anti-xray;");
-        lore.add("&7Black Door only switches it on or off.");
-        lore.add("&7Its engine mode is not changed.");
+        lore.add("&7This is Paper's own anti-xray.");
+        lore.add("");
+        lore.add("&aNormal&7: hides only ores buried in rock.");
+        lore.add("&7Ores touching air stay visible.");
+        lore.add("&bStrong&7: also fills the rock with fake ores,");
+        lore.add("&7so X-ray packs show a jumble. Costs some");
+        lore.add("&7bandwidth and client performance.");
+        lore.add("&7Neither hides anything above the");
+        lore.add("&7configured max height.");
         lore.add("");
         var files = engine.antiXrayFiles();
         var found = files.flatMap(engine::antiXrayStatus);
@@ -311,43 +319,54 @@ public final class BlackDoorMenus {
             return new MenuItem(slot, Icon.ANTI_XRAY, "&fAnti X-Ray &8| &8Unknown", lore, null);
         }
         var status = found.get();
-        boolean on = status.configuredOff().isEmpty();
+        AntiXrayStrength level = status.level();
+        boolean on = level != AntiXrayStrength.OFF;
         boolean pending = status.pending();
-        lore.add("&7Configured: " + antiXrayState(status.configuredOff()));
+        lore.add("&7Configured: " + antiXrayState(status.configured()));
         addRunning(lore, status);
         if (pending) {
             lore.add("&6Applies after the next server restart.");
         } else {
             lore.add("&8A change applies after the next server restart.");
         }
-        String name = "&fAnti X-Ray &8| " + (on ? "&aOn" : "&eOff") + (pending ? " &6(after restart)" : "");
+        String name = "&fAnti X-Ray &8| " + strengthColour(level) + level.label()
+                + (pending ? " &6(after restart)" : "");
         lore.add("");
-        lore.add(mayChange ? "&eClick to turn " + (on ? "off" : "on") : "&8You can look, but not change this.");
+        lore.add(mayChange ? "&eClick to change: &8Off > &aNormal > &bStrong" : "&8You can look, but not change this.");
         return new MenuItem(slot, on ? Icon.ANTI_XRAY : Icon.CHECK_DISABLED, name, lore,
-                s -> switchAntiXray(s, !on), on && !pending);
+                s -> switchAntiXray(s, level.next()), on && !pending);
     }
 
     /** A world loaded after the server started is never shown as on. */
-    private static void addRunning(List<String> lore, io.github.intruder_tech.blackdoor.core.antixray.AntiXrayStatus
-            status) {
-        List<String> off = status.runningOff();
+    private static void addRunning(List<String> lore, AntiXrayStatus status) {
         List<String> unknown = status.runningUnknown();
-        String unknownText = "&6Unknown until restart: &f" + Text.escape(String.join(", ", unknown));
+        Map<String, AntiXrayStrength> known = status.runningKnown();
         if (unknown.isEmpty()) {
-            lore.add("&7Running now: " + antiXrayState(off));
-        } else if (off.isEmpty()) {
-            lore.add("&7Running now: " + unknownText);
-        } else {
-            lore.add("&7Running now: " + antiXrayState(off));
-            lore.add(unknownText);
+            lore.add("&7Running now: " + antiXrayState(known));
+            return;
+        }
+        lore.add("&7Running now: &6Unknown until restart: &f" + Text.escape(String.join(", ", unknown)));
+        if (!known.isEmpty()) {
+            lore.add("&7Other worlds: " + antiXrayState(known));
         }
     }
 
-    private static String antiXrayState(List<String> off) {
-        return off.isEmpty() ? "&aOn" : "&eOff in: &f" + Text.escape(String.join(", ", off));
+    private static String antiXrayState(Map<String, AntiXrayStrength> worlds) {
+        String colour = worlds.containsValue(AntiXrayStrength.OFF) ? "&e"
+                : strengthColour(worlds.containsValue(AntiXrayStrength.NORMAL)
+                        ? AntiXrayStrength.NORMAL : AntiXrayStrength.STRONG);
+        return colour + Text.escape(AntiXrayStatus.describe(worlds));
     }
 
-    private void switchAntiXray(MenuSession session, boolean enable) {
+    private static String strengthColour(AntiXrayStrength strength) {
+        return switch (strength) {
+            case OFF -> "&e";
+            case NORMAL -> "&a";
+            case STRONG -> "&b";
+        };
+    }
+
+    private void switchAntiXray(MenuSession session, AntiXrayStrength strength) {
         if (!mayEdit(session)) {
             return;
         }
@@ -357,13 +376,13 @@ public final class BlackDoorMenus {
             return;
         }
         String actor = session.viewer().name();
-        String word = enable ? "On" : "Off";
+        String word = strength.label();
         boolean queued = engine.submitWork(() -> {
             try {
-                int changed = engine.setAntiXray(files, enable, actor);
+                int changed = engine.setAntiXray(files, strength, actor);
                 session.viewer().sendMessage(Text.PREFIX + (changed == 0
                         ? "&7Anti X-Ray is already " + word + " in Paper's files."
-                        : "&aAnti X-Ray turned " + word + " in Paper's files.")
+                        : "&aAnti X-Ray set to " + word + " in Paper's files.")
                         + " &6It applies after the next server restart.");
             } catch (java.io.IOException e) {
                 session.viewer().sendMessage(Text.PREFIX + "&cAnti X-Ray was not changed: "

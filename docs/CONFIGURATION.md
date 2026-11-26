@@ -78,15 +78,27 @@ connections) and `packet.max-sessions` (restart required).
 | `blackdoor.gui.edit` | Change settings in the panel |
 | `blackdoor.command.checks` / `blackdoor.command.player` | Text views |
 
-**Anti X-ray switch** (Paper, Purpur and Folia only; needs `blackdoor.gui.edit`): the "Anti X-Ray" item in the
-panel turns Paper's own anti-xray on or off. If it is configured off in any loaded world, a click
-turns it on; otherwise a click turns it off. It changes only `anticheat.anti-xray.enabled` in
-`config/paper-world-defaults.yml`, and in a world's `paper-world.yml` only where that key already
-exists. Before the first change to a file a copy is kept next to it
-(`<file name>.blackdoor-backup`). The change applies after the next server restart; Black Door
-never restarts or reloads the server. Each change is audited. The panel and `/blackdoor setup`
-show both what the files say and what the server started with; the latter is kept in
-`antixray-startup.properties` in Black Door's data folder (written by Black Door, not a setting).
+**Anti X-ray choice** (Paper, Purpur and Folia only; needs `blackdoor.gui.edit`): the "Anti X-Ray"
+item in the panel changes Paper's own anti-xray. Each click moves Off > Normal > Strong > Off.
+
+| Choice | `enabled` | `engine-mode` | What players with X-ray see |
+|---|---|---|---|
+| Off | `false` | not touched | every ore |
+| Normal | `true` | `1` | ores buried in rock are hidden; ores touching air stay visible |
+| Strong | `true` | `2` | rock is also filled with fake ores (a jumble); costs some bandwidth and client performance |
+
+Neither hides anything above Paper's configured `max-block-height`. An existing `engine-mode: 3`
+counts as Strong and is rewritten only if Normal is chosen. If any loaded world is off, the panel
+shows Off; it shows Strong only if every world is Strong.
+
+Both keys are under `anticheat.anti-xray`, in `config/paper-world-defaults.yml`, and in a world's
+`paper-world.yml` only for keys that file already has. Nothing else is changed. Normal and Strong
+need an `engine-mode` key in the defaults file; without one the change is refused. Before the first
+change to a file a copy is kept next to it (`<file name>.blackdoor-backup`). A change applies
+after the next server restart; Black Door never restarts or reloads the server. Each change is
+audited. The panel and `/blackdoor setup` show both what the files say and what the server
+started with; the latter is kept in `antixray-startup.properties` in Black Door's data folder
+(written by Black Door, not a setting).
 
 ## 2c. Implemented in Phase 4 (so far)
 

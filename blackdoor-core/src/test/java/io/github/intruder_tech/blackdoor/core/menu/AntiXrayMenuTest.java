@@ -71,37 +71,87 @@ class AntiXrayMenuTest {
     }
 
     @Test
-    void offItemExplainsPaperFeatureAndOffersToTurnOn() {
+    void offItemExplainsBothStrengthsInPlainWords() {
         MenuItem item = item(open(RecordingSender.admin()));
         assertThat(item.name()).contains("Anti X-Ray").contains("Off").doesNotContain("restart");
         assertThat(item.action()).isNotNull();
-        assertThat(String.join(" ", item.lore()))
+        assertThat(String.join(" ", item.lore()).replaceAll("&.", ""))
                 .contains("Paper's own")
                 .contains("Hides ores")
-                .contains("engine mode is not changed")
+                .contains("Normal: hides only ores buried in rock")
+                .contains("Ores touching air stay visible")
+                .contains("Strong: also fills the rock with fake ores")
+                .contains("jumble")
+                .contains("bandwidth")
+                .contains("max height")
                 .contains("next server restart")
-                .contains("Click to turn on");
+                .contains("Click to change: Off > Normal > Strong")
+                .doesNotContain("engine mode is not changed");
     }
 
     @Test
-    void togglesBackAndForthShowingConfiguredAndRunning() throws Exception {
+    void cyclesOffNormalStrongShowingConfiguredAndRunning() throws Exception {
         RecordingSender admin = RecordingSender.admin();
         MenuTest.FakeSession session = open(admin);
 
         clickAndWait(session);
-        AwaitMessages.await(admin, m -> m.contains("turned On") && m.contains("after the next server restart"));
+        AwaitMessages.await(admin, m -> m.contains("set to Normal") && m.contains("after the next server restart"));
         assertThat(Files.readString(defaults)).contains("enabled: true").contains("engine-mode: 1");
-        assertThat(item(session).name()).contains("On").contains("after restart");
+        assertThat(item(session).name()).contains("Normal").contains("after restart");
         assertThat(item(session).lore())
-                .anyMatch(l -> l.contains("Configured:") && l.contains("On"))
-                .anyMatch(l -> l.contains("Running now:") && l.contains("Off"))
-                .anyMatch(l -> l.contains("Click to turn off"));
+                .anyMatch(l -> l.contains("Configured:") && l.contains("Normal"))
+                .anyMatch(l -> l.contains("Running now:") && l.contains("Off"));
 
         clickAndWait(session);
-        AwaitMessages.await(admin, m -> m.contains("turned Off") && m.contains("after the next server restart"));
-        assertThat(Files.readString(defaults)).contains("enabled: false");
+        AwaitMessages.await(admin, m -> m.contains("set to Strong"));
+        assertThat(Files.readString(defaults)).contains("enabled: true").contains("engine-mode: 2");
+        assertThat(item(session).name()).contains("Strong").contains("after restart");
+
+        clickAndWait(session);
+        AwaitMessages.await(admin, m -> m.contains("set to Off"));
+        assertThat(Files.readString(defaults)).contains("enabled: false").contains("engine-mode: 2");
         assertThat(item(session).name()).contains("Off").doesNotContain("after restart");
-        assertThat(item(session).lore()).anyMatch(l -> l.contains("Click to turn on"));
+    }
+
+    @Test
+    void aChangeOfStrengthAloneIsPendingUntilRestart() throws Exception {
+        restartWith("enabled: true\n    engine-mode: 1");
+        MenuTest.FakeSession session = open(RecordingSender.admin());
+        assertThat(item(session).name()).contains("Normal").doesNotContain("after restart");
+        assertThat(item(session).glow()).isTrue();
+        clickAndWait(session);
+        assertThat(item(session).name()).contains("Strong").contains("after restart");
+        assertThat(item(session).lore())
+                .anyMatch(l -> l.contains("Configured:") && l.contains("Strong"))
+                .anyMatch(l -> l.contains("Running now:") && l.contains("Normal"));
+        assertThat(item(session).glow()).isFalse();
+    }
+
+    @Test
+    void engineModeThreeShowsAsStrongAndSwitchingOffKeepsIt() throws Exception {
+        restartWith("enabled: true\n    engine-mode: 3");
+        MenuTest.FakeSession session = open(RecordingSender.admin());
+        assertThat(item(session).name()).contains("Strong");
+        clickAndWait(session);
+        assertThat(Files.readString(defaults)).contains("enabled: false").contains("engine-mode: 3");
+    }
+
+    @Test
+    void aMissingEngineModeIsExplainedToThePlayer() throws Exception {
+        Files.writeString(defaults, "anticheat:\n  anti-xray:\n    enabled: false\n");
+        RecordingSender admin = RecordingSender.admin();
+        clickAndWait(open(admin));
+        AwaitMessages.await(admin, m -> m.contains("was not changed") && m.contains("engine-mode"));
+        assertThat(Files.readString(defaults)).contains("enabled: false");
+    }
+
+    /** A new server process that starts with the given settings. */
+    private void restartWith(String antiXray) throws IOException {
+        engine.disable();
+        Files.writeString(defaults, "anticheat:\n  anti-xray:\n    " + antiXray + "\n");
+        Files.deleteIfExists(dir.resolve("data").resolve("antixray-startup.properties"));
+        engine = new BlackDoorEngine(platform, TimeSource.system());
+        engine.enable();
     }
 
     @Test
@@ -116,7 +166,7 @@ class AntiXrayMenuTest {
             }
         }
         assertThat(audit.toString().lines()).anyMatch(l -> l.contains("\"actor\":\"Admin\"")
-                && l.contains("antixray.set enabled=true") && l.contains("success"));
+                && l.contains("antixray.set strength=normal") && l.contains("success"));
     }
 
     @Test
@@ -167,7 +217,7 @@ class AntiXrayMenuTest {
     @Test
     void viewerWithoutPermissionIsNotInvitedToClick() {
         MenuItem item = item(open(new RecordingSender("Mod", Set.of("blackdoor.command.gui"))));
-        assertThat(item.lore()).noneMatch(l -> l.contains("Click to turn"));
+        assertThat(item.lore()).noneMatch(l -> l.contains("Click to"));
     }
 
     @Test
@@ -190,7 +240,7 @@ class AntiXrayMenuTest {
         engine = new BlackDoorEngine(platform, TimeSource.system());
         engine.enable();
         assertThat(item(open(RecordingSender.admin())).lore())
-                .anyMatch(l -> l.contains("Running now:") && l.contains("&aOn"));
+                .anyMatch(l -> l.contains("Running now:") && l.contains("Normal"));
 
         Path server = dir.resolve("server");
         Map<String, Path> worlds = new LinkedHashMap<>();
@@ -200,7 +250,7 @@ class AntiXrayMenuTest {
         MenuItem item = item(open(RecordingSender.admin()));
         assertThat(item.name()).contains("after restart");
         assertThat(item.lore()).anyMatch(l -> l.contains("Running now:") && l.contains("Unknown until restart")
-                && l.contains("later") && !l.contains("&aOn"));
+                && l.contains("later") && !l.contains("Normal"));
         assertThat(item.glow()).isFalse();
     }
 
@@ -231,6 +281,6 @@ class AntiXrayMenuTest {
             }
         }
         assertThat(audit.toString().lines())
-                .anyMatch(l -> l.contains("antixray.set enabled=true") && l.contains("failed"));
+                .anyMatch(l -> l.contains("antixray.set strength=normal") && l.contains("failed"));
     }
 }

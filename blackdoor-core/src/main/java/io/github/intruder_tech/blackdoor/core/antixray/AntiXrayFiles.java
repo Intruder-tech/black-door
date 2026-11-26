@@ -19,9 +19,9 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Reads and switches {@code anticheat.anti-xray.enabled} in Paper's own configuration files: the
- * world defaults, and a world's {@code paper-world.yml} only where it already has that key.
- * Nothing else in a file changes. Paper reads these files at startup only. Blocking file I/O.
+ * Reads and sets {@code enabled} and {@code engine-mode} under {@code anticheat.anti-xray} in
+ * Paper's own configuration files: the world defaults, and in a world's {@code paper-world.yml}
+ * each key only where it already has it. Nothing else in a file changes. Paper reads these files at startup only. Blocking file I/O.
  */
 public final class AntiXrayFiles {
 
@@ -29,7 +29,9 @@ public final class AntiXrayFiles {
     public static final String BACKUP_SUFFIX = ".blackdoor-backup";
 
     private static final String TEMP_SUFFIX = ".blackdoor-tmp";
-    private static final String KEY = "anticheat.anti-xray.enabled";
+    private static final String SECTION = "anticheat.anti-xray.";
+    private static final String ENABLED = "enabled";
+    private static final String ENGINE_MODE = "engine-mode";
     private static final String DEFAULTS = "config/paper-world-defaults.yml";
     private static final String WORLD_FILE = "paper-world.yml";
     /** One change at a time, even when two operators click at once. */
@@ -51,24 +53,28 @@ public final class AntiXrayFiles {
         this.worldFolders = new LinkedHashMap<>(worldFolders);
     }
 
-    /** Whether the files say anti-xray is on, per world; null when the files cannot tell. */
-    public Map<String, Boolean> worldStates() {
+    /** What the files say about each world; null when the files cannot tell. */
+    public Map<String, AntiXrayStrength> worldStates() {
         try {
             if (!Files.isRegularFile(defaults)) {
                 return null;
             }
-            boolean byDefault = Boolean.TRUE.equals(value(parse(DEFAULTS, read(defaults, DEFAULTS))));
-            Map<String, Boolean> states = new LinkedHashMap<>();
+            Map<String, Object> byDefault = settings(DEFAULTS, read(defaults, DEFAULTS));
+            Map<String, AntiXrayStrength> states = new LinkedHashMap<>();
             for (Map.Entry<String, Path> world : worldFolders.entrySet()) {
                 Path file = world.getValue().resolve(WORLD_FILE);
-                boolean on = byDefault;
+                Map<String, Object> effective = new LinkedHashMap<>(byDefault);
                 if (Files.isRegularFile(file)) {
                     String name = world.getKey() + "/" + WORLD_FILE;
-                    if (value(parse(name, read(file, name))) instanceof Boolean override) {
-                        on = override;
+                    Map<String, Object> own = settings(name, read(file, name));
+                    if (own.get(ENABLED) instanceof Boolean enabled) {
+                        effective.put(ENABLED, enabled);
+                    }
+                    if (own.get(ENGINE_MODE) instanceof Number mode) {
+                        effective.put(ENGINE_MODE, mode);
                     }
                 }
-                states.put(world.getKey(), on);
+                states.put(world.getKey(), strength(effective));
             }
             return states;
         } catch (IOException | RuntimeException e) {
@@ -76,17 +82,30 @@ public final class AntiXrayFiles {
         }
     }
 
+    private static AntiXrayStrength strength(Map<String, Object> settings) {
+        if (!Boolean.TRUE.equals(settings.get(ENABLED))) {
+            return AntiXrayStrength.OFF;
+        }
+        // Paper's own default is engine-mode 1
+        return isStrong(settings.get(ENGINE_MODE)) ? AntiXrayStrength.STRONG : AntiXrayStrength.NORMAL;
+    }
+
+    private static boolean isStrong(Object engineMode) {
+        return engineMode instanceof Number mode && (mode.intValue() == 2 || mode.intValue() == 3);
+    }
+
     /**
-     * Sets the switch in the world defaults and in every world file that has its own. All edits
-     * are prepared and checked before the first write; if a write fails, the files already
-     * written are put back.
+     * Sets the strength in the world defaults and in every world file that has its own values.
+     * Off leaves engine-mode alone; Strong keeps an existing engine-mode 3. All edits are
+     * prepared and checked before the first write; if a write fails, the files already written
+     * are put back.
      *
      * @return the files that changed (empty if they already said so)
      * @throws IOException with a message fit to show an operator
      */
-    public List<Path> setEnabled(boolean enabled) throws IOException {
+    public List<Path> set(AntiXrayStrength strength) throws IOException {
         synchronized (WRITE_LOCK) {
-            List<Edit> edits = plan(enabled);
+            List<Edit> edits = plan(strength);
             for (Edit edit : edits) {
                 backUp(edit);
             }
@@ -95,7 +114,7 @@ public final class AntiXrayFiles {
         }
     }
 
-    private List<Edit> plan(boolean enabled) throws IOException {
+    private List<Edit> plan(AntiXrayStrength strength) throws IOException {
         if (!Files.isRegularFile(defaults)) {
             throw new IOException(DEFAULTS + " was not found");
         }
@@ -112,35 +131,64 @@ public final class AntiXrayFiles {
             Path file = target.getKey();
             String name = target.getValue();
             String before = read(file, name);
-            Object current = value(parse(name, before));
-            if (current == null) {
-                if (file.equals(defaults)) {
-                    throw new IOException(name + " has no " + KEY + " setting");
+            Map<String, Object> current = settings(name, before);
+            if (file.equals(defaults)) {
+                require(current, ENABLED);
+                if (strength != AntiXrayStrength.OFF) {
+                    require(current, ENGINE_MODE);
                 }
-                continue;
             }
-            if (!Boolean.valueOf(enabled).equals(current)) {
-                edits.add(new Edit(file, name, before, edit(name, before, enabled)));
+            Map<String, Object> wanted = changes(current, strength);
+            if (!wanted.isEmpty()) {
+                edits.add(new Edit(file, name, before, edit(name, before, wanted)));
             }
         }
         return edits;
     }
 
-    /** Changes the one line and proves that nothing but the switch is different afterwards. */
-    private static String edit(String name, String before, boolean enabled) throws IOException {
-        String after;
+    private static void require(Map<String, Object> defaults, String key) throws IOException {
+        if (defaults.get(key) == null) {
+            throw new IOException(DEFAULTS + " has no " + SECTION + key + " setting");
+        }
+    }
+
+    /** The values to write: only keys the file already has, and only where they differ. */
+    private static Map<String, Object> changes(Map<String, Object> current, AntiXrayStrength strength) {
+        Map<String, Object> wanted = new LinkedHashMap<>();
+        Boolean enabled = strength != AntiXrayStrength.OFF;
+        if (current.get(ENABLED) != null && !enabled.equals(current.get(ENABLED))) {
+            wanted.put(ENABLED, enabled);
+        }
+        Object mode = current.get(ENGINE_MODE);
+        if (mode != null) {
+            if (strength == AntiXrayStrength.NORMAL && !Integer.valueOf(1).equals(mode)) {
+                wanted.put(ENGINE_MODE, 1);
+            } else if (strength == AntiXrayStrength.STRONG && !isStrong(mode)) {
+                wanted.put(ENGINE_MODE, 2);
+            }
+        }
+        return wanted;
+    }
+
+    /** Changes the lines and proves that nothing but those values is different afterwards. */
+    private static String edit(String name, String before, Map<String, Object> wanted) throws IOException {
+        String unsafe = name + " is written in a way Black Door cannot safely edit";
+        String after = before;
         try {
-            after = YamlLineEditor.setScalar(before, KEY, Boolean.toString(enabled));
+            for (Map.Entry<String, Object> value : wanted.entrySet()) {
+                after = YamlLineEditor.setScalar(after, SECTION + value.getKey(), value.getValue().toString());
+            }
         } catch (IllegalArgumentException e) {
-            throw new IOException(name + " is written in a way Black Door cannot safely edit", e);
+            throw new IOException(unsafe, e);
         }
         Map<String, Object> expected = parse(name, before);
-        if (!(section(expected) instanceof Map<?, ?>)) {
-            throw new IOException(name + " is written in a way Black Door cannot safely edit");
+        Map<String, Object> section = section(expected);
+        if (section == null) {
+            throw new IOException(unsafe);
         }
-        section(expected).put("enabled", enabled);
+        section.putAll(wanted);
         if (!expected.equals(parse(name, after))) {
-            throw new IOException(name + " is written in a way Black Door cannot safely edit");
+            throw new IOException(unsafe);
         }
         return after;
     }
@@ -155,9 +203,10 @@ public final class AntiXrayFiles {
         return null;
     }
 
-    private static Object value(Map<String, Object> root) {
-        Map<String, Object> section = section(root);
-        return section == null ? null : section.get("enabled");
+    /** The values under {@code anticheat.anti-xray}; empty if the file has none. */
+    private static Map<String, Object> settings(String name, String content) throws IOException {
+        Map<String, Object> section = section(parse(name, content));
+        return section == null ? Map.of() : section;
     }
 
     private static Map<String, Object> parse(String name, String content) throws IOException {

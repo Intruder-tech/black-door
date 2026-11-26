@@ -33,9 +33,14 @@ class AntiXraySetupTest {
     }
 
     private Path defaults(boolean enabled) throws IOException {
+        return defaults(enabled, 1);
+    }
+
+    private Path defaults(boolean enabled, int mode) throws IOException {
         Path file = dir.resolve("server").resolve("config").resolve("paper-world-defaults.yml");
         Files.createDirectories(file.getParent());
-        Files.writeString(file, "anticheat:\n  anti-xray:\n    enabled: " + enabled + "\n");
+        Files.writeString(file, "anticheat:\n  anti-xray:\n    enabled: " + enabled
+                + "\n    engine-mode: " + mode + "\n");
         return file;
     }
 
@@ -59,7 +64,23 @@ class AntiXraySetupTest {
     void onAndRunningPasses() throws Exception {
         defaults(true);
         start(PlatformType.PAPER);
-        assertThat(antiXrayLine()).contains("OK").contains("anti-xray is on in every world");
+        assertThat(antiXrayLine()).contains("OK").contains("anti-xray is on in every world").contains("Normal");
+    }
+
+    @Test
+    void strongIsNamed() throws Exception {
+        defaults(true, 2);
+        start(PlatformType.PAPER);
+        assertThat(antiXrayLine()).contains("OK").contains("Strong");
+    }
+
+    @Test
+    void aChangeOfStrengthAloneNeedsARestart() throws Exception {
+        defaults(true, 1);
+        start(PlatformType.PAPER);
+        defaults(true, 2);
+        assertThat(antiXrayLine()).contains("WARN").contains("set to Strong").contains("running now: Normal")
+                .contains("restart");
     }
 
     @Test

@@ -82,7 +82,8 @@ public final class BlackDoorEngine {
     private volatile java.util.concurrent.ScheduledExecutorService heartbeat;
     private volatile ProxyGate proxyGate;
     private volatile io.github.intruder_tech.blackdoor.auth.AuthService auth;
-    private volatile java.util.Map<String, Boolean> antiXrayAtStart = java.util.Map.of();
+    private volatile java.util.Map<String, io.github.intruder_tech.blackdoor.core.antixray.AntiXrayStrength>
+            antiXrayAtStart = java.util.Map.of();
 
     /** How often Black Door pings each player for latency and acknowledgement tracking. */
     static final long TRANSACTION_INTERVAL_MS = 50;
@@ -381,17 +382,18 @@ public final class BlackDoorEngine {
     }
 
     /**
-     * Switches Paper's anti-xray in Paper's files; the server applies it at its next restart.
+     * Sets the strength of Paper's anti-xray in Paper's files; the server applies it at its next restart.
      * Blocking: call from a worker thread. Audited with actor and outcome.
      *
      * @return the number of files changed
      */
-    public int setAntiXray(io.github.intruder_tech.blackdoor.core.antixray.AntiXrayFiles files, boolean enabled,
+    public int setAntiXray(io.github.intruder_tech.blackdoor.core.antixray.AntiXrayFiles files,
+                           io.github.intruder_tech.blackdoor.core.antixray.AntiXrayStrength strength,
                            String actor) throws java.io.IOException {
-        String action = "antixray.set enabled=" + enabled;
+        String action = "antixray.set strength=" + strength.name().toLowerCase(Locale.ROOT);
         AuditLog currentAudit = audit;
         try {
-            int changed = files.setEnabled(enabled).size();
+            int changed = files.set(strength).size();
             if (currentAudit != null) {
                 currentAudit.record(actor, action, "success: " + changed + " file(s)");
             }

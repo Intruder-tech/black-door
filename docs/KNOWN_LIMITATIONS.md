@@ -35,13 +35,16 @@
   still needs: server changes (effects, velocity, abilities, blocks) applied when the client
   acknowledges them; the client's own block placing and breaking; the worn chest item, because a
   claimed elytra flight gets no verdict; and teleport confirmations matched by id.
-- Anti X-ray is Paper's own feature. Black Door reports it and switches `enabled` on or off in
-  Paper's files (never `engine-mode` or the block lists); Paper applies it at the next restart.
-  "Running now" is what the files said when Black Door first started in this server run. A world
-  loaded later shows as unknown until a restart. If the plugin itself is first loaded while the
-  server is already running (with a plugin manager), it cannot know about earlier file edits.
-  Only loaded worlds are covered, and switching sets every per-world override to the same value
-  (a mix of on and off worlds is not restored).
+- Anti X-ray is Paper's own feature. Black Door reports it and sets `enabled` and `engine-mode`
+  in Paper's files (never the block lists or `max-block-height`); Paper applies it at the next
+  restart. Nothing above the configured max height is hidden, and Normal leaves ores that touch
+  air visible. "Running now" is what the files said when Black Door first started in this server
+  run. A world loaded later shows as unknown until a restart. If the plugin itself is first loaded
+  while the server is already running (with a plugin manager), it cannot know about earlier file
+  edits. After updating the plugin without a restart, worlds that were on show as unknown, because
+  the older record did not keep the strength.
+  Only loaded worlds are covered, and a choice sets every per-world override to the same value
+  (worlds with different settings are not restored).
 - Anti X-ray switch, smaller gaps:
   - If someone edits one of Paper's files by hand at the same moment as the click, the hand edit
     can be lost.

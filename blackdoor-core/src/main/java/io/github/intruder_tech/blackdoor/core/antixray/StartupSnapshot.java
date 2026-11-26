@@ -7,6 +7,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
 import java.util.function.Consumer;
@@ -27,12 +28,12 @@ public final class StartupSnapshot {
     /**
      * @param processStart start time of this server process
      * @param current      what the files say now; null if they cannot be read
-     * @return on or off per world as of this process's start; worlds not in it are unknown
+     * @return the strength per world as of this process's start; worlds not in it are unknown
      */
-    public static Map<String, Boolean> remember(Path file, long processStart, Map<String, Boolean> current,
-                                                Consumer<String> warn) {
+    public static Map<String, AntiXrayStrength> remember(Path file, long processStart,
+            Map<String, AntiXrayStrength> current, Consumer<String> warn) {
         String start = Long.toString(processStart);
-        Map<String, Boolean> snapshot = current == null ? Map.of() : current;
+        Map<String, AntiXrayStrength> snapshot = current == null ? Map.of() : current;
         if (Files.exists(file)) {
             Properties saved = new Properties();
             try (Reader in = Files.newBufferedReader(file, StandardCharsets.UTF_8)) {
@@ -54,20 +55,30 @@ public final class StartupSnapshot {
         return snapshot;
     }
 
-    private static Map<String, Boolean> worlds(Properties saved) {
-        Map<String, Boolean> worlds = new LinkedHashMap<>();
+    /**
+     * The older format wrote "on" or "off": an "on" world's strength was not recorded, so it is
+     * left out and counts as unknown.
+     */
+    private static Map<String, AntiXrayStrength> worlds(Properties saved) {
+        Map<String, AntiXrayStrength> worlds = new LinkedHashMap<>();
         for (String key : saved.stringPropertyNames()) {
             if (key.startsWith(WORLD)) {
-                worlds.put(key.substring(WORLD.length()), "on".equals(saved.getProperty(key)));
+                String value = saved.getProperty(key);
+                for (AntiXrayStrength strength : AntiXrayStrength.values()) {
+                    if (strength.name().equalsIgnoreCase(value)) {
+                        worlds.put(key.substring(WORLD.length()), strength);
+                    }
+                }
             }
         }
         return worlds;
     }
 
-    private static void save(Path file, String start, Map<String, Boolean> worlds, Consumer<String> warn) {
+    private static void save(Path file, String start, Map<String, AntiXrayStrength> worlds,
+            Consumer<String> warn) {
         Properties out = new Properties();
         out.setProperty(PROCESS_START, start);
-        worlds.forEach((world, on) -> out.setProperty(WORLD + world, on ? "on" : "off"));
+        worlds.forEach((world, strength) -> out.setProperty(WORLD + world, strength.name().toLowerCase(Locale.ROOT)));
         try {
             StringWriter text = new StringWriter();
             out.store(text, "Anti-xray as the server started it. Written by Black Door; do not edit.");

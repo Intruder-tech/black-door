@@ -372,6 +372,9 @@ write, restore on a failed write; shows configured and running state; audited). 
 survives a plugin re-enable (`StartupSnapshot`, tagged with the JVM start time); setup uses the
 same logic. Also fixed: `YamlLineEditor` keeps each line's own ending in files that mix CRLF and
 LF. Unit tests only.
+**4.10 anti-xray strength:** the item now cycles Off > Normal > Strong (Paper `engine-mode` 1 and
+2; an existing 3 counts as Strong). A change of strength alone is pending until restart, in the
+panel and in setup. Unit tests only.
 **Not verified:** on a running Paper server (in game, and Paper reading the edited files after a
 restart).
 

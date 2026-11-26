@@ -2,6 +2,7 @@ package io.github.intruder_tech.blackdoor.core.command.sub;
 
 import io.github.intruder_tech.blackdoor.config.ReloadResult;
 import io.github.intruder_tech.blackdoor.core.BlackDoorEngine;
+import io.github.intruder_tech.blackdoor.core.antixray.AntiXrayStatus;
 import io.github.intruder_tech.blackdoor.core.command.BdSender;
 import io.github.intruder_tech.blackdoor.core.command.Subcommand;
 import io.github.intruder_tech.blackdoor.core.command.Text;
@@ -162,20 +163,25 @@ public final class SetupCommand implements Subcommand {
         }
         var status = found.get();
         List<String> off = status.configuredOff();
+        List<String> switchedOff = status.switchedOff();
         String panel = "the Anti X-Ray item in /" + engine.commands().label() + " gui";
-        if (!off.isEmpty() && status.changedSinceStart()) {
-            lines.add(warn("Paper anti-xray was switched off in: " + String.join(", ", off) + ". That applies after the next"
-                    + " restart. To keep it on, switch it back with " + panel + " before restarting."));
+        String configured = AntiXrayStatus.describe(status.configured());
+        if (!switchedOff.isEmpty()) {
+            lines.add(warn("Paper anti-xray was switched off in: " + String.join(", ", switchedOff) + ". That applies"
+                    + " after the next restart. To keep it on, switch it back with " + panel + " before restarting."));
         } else if (!off.isEmpty()) {
-            lines.add(warn("Paper anti-xray is off in: " + String.join(", ", off) + ". Turn it on with " + panel
-                    + ", then restart the server."));
+            lines.add(warn("Paper anti-xray is off in: " + String.join(", ", off) + ". Turn it on (Normal or Strong)"
+                    + " with " + panel + ", then restart the server."));
         } else if (status.pending()) {
-            List<String> stillOff = status.runningOff();
-            lines.add(warn("Paper anti-xray is set to on but not running yet ("
-                    + (stillOff.isEmpty() ? "unknown in: " + String.join(", ", status.runningUnknown())
-                    : "off in: " + String.join(", ", stillOff)) + "): restart the server."));
+            var known = status.runningKnown();
+            String unknown = status.runningUnknown().isEmpty() ? ""
+                    : "unknown in: " + String.join(", ", status.runningUnknown());
+            String now = known.equals(status.configured()) || known.isEmpty() ? unknown
+                    : "running now: " + AntiXrayStatus.describe(known) + (unknown.isEmpty() ? "" : "; " + unknown);
+            lines.add(warn("Paper anti-xray is set to " + configured + " but not running yet (" + now
+                    + "): restart the server."));
         } else {
-            lines.add(ok("Paper anti-xray is on in every world"));
+            lines.add(ok("Paper anti-xray is on in every world, strength: " + configured));
         }
     }
 
