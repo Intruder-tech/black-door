@@ -1,0 +1,15 @@
+# Black Door - what happens to players who keep getting blocked
+#
+# Do not edit config-version; Black Door uses it to migrate this file safely.
+config-version: 1
+
+# disabled: nobody is kicked.
+# watch:    nobody is kicked; the log says who would have been.
+# kick:     the player is kicked.
+# Only checks set to Block (with Protection ON) can lead to a kick. Guess-based checks such as
+# spam detection never do. Players with the permission blackdoor.exempt.kick are never kicked.
+mode: disabled
+
+# This many blocked actions within window-seconds triggers the kick.
+findings-to-kick: 5
+window-seconds: 60

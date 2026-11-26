@@ -146,6 +146,15 @@ and flags a short Velocity secret. The proxy flags are read at startup.
 `blackdoor.command.auth` allows `/blackdoor auth reset <player>`. See
 [AUTHENTICATION.md](AUTHENTICATION.md).
 
+## 2e. Auto kick (Phase 5)
+
+**`enforcement.yml`:** `mode` (`disabled`, `watch` or `kick`; default `disabled`),
+`findings-to-kick` (5), `window-seconds` (60). GUI item "Auto kick". Only deterministic and high
+confidence findings count, and only blocked ones can kick, so the check must be on Block and
+Protection ON. Spam, oversized mod data, books, creative items and item data are heuristic and never
+count. Permission `blackdoor.exempt.kick` (default nobody) exempts a player. Kicks are audited.
+Backends only.
+
 ## 3. Profiles (intent)
 
 | Profile | Intent |

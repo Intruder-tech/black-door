@@ -20,6 +20,9 @@ commands:
     description: Sign in to your account (login system)
     usage: /signin <password>
 permissions:
+  blackdoor.exempt.kick:
+    description: Never kicked automatically by Black Door
+    default: false
   blackdoor.command.auth:
     description: Reset a forgotten password (/blackdoor auth reset)
     default: op

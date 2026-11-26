@@ -114,7 +114,8 @@ public final class BlackDoorMenus {
                     List.of("&7" + PacketCheck.values().length + " checks for actions only", "&7hacked clients can do.",
                             "", "&eClick to open"),
                     s -> s.show(packetChecks())));
-            items.add(locked(14, Icon.LOCKED_COMBAT, "Movement & combat checks", "Fly, speed, reach, kill aura...", "Phase 3"));
+            items.add(locked(14, Icon.LOCKED_COMBAT, "Combat checks", "Reach, kill aura...", "Phase 3"));
+            items.add(autoKickItem(31));
             items.add(antiXrayItem(16, session.viewer().hasPermission(SettingsService.EDIT_PERMISSION)));
             Setting joins = settings.find(SettingsService.NETWORK_MODE).orElseThrow();
             String joinMode = settings.current(joins);
@@ -147,6 +148,44 @@ public final class BlackDoorMenus {
             }
             items.add(new MenuItem(40, Icon.CLOSE, "&cClose", List.of(), MenuSession::close));
             return new Menu("Black Door", 5, items);
+        };
+    }
+
+    private MenuItem autoKickItem(int slot) {
+        Setting setting = settings.find(SettingsService.ENFORCEMENT_MODE).orElseThrow();
+        String mode = settings.current(setting);
+        var rules = engine.enforcementSettings();
+        List<String> lore = new ArrayList<>();
+        lore.add("&7Kicks a player after &f" + rules.findingsToKick() + " &7blocked");
+        lore.add("&7actions in &f" + rules.windowSeconds() + " &7seconds.");
+        lore.add("&7Spam-style guesses never count.");
+        lore.add("");
+        lore.add("&7Now: " + kickLabel(mode) + " &8- " + switch (mode) {
+            case "kick" -> "&7kicks";
+            case "watch" -> "&7only logs who would be kicked";
+            default -> "&7nobody is kicked";
+        });
+        boolean on = "enforce".equals(settings.current(settings.find(SettingsService.GLOBAL_MODE).orElseThrow()));
+        if (mode.equals("kick") && !on) {
+            lore.add("&6Will only kick once Protection is ON.");
+        }
+        lore.add("");
+        lore.add("&eClick to change: &8Off > &aWatch &8> &cKick");
+        String next = switch (settings.next(setting)) {
+            case "kick" -> "Kick";
+            case "watch" -> "Watch";
+            default -> "Off";
+        };
+        return new MenuItem(slot, mode.equals("disabled") ? Icon.CHECK_DISABLED : Icon.AUTO_KICK,
+                "&fAuto kick &8| " + kickLabel(mode), lore,
+                s -> cycle(s, setting, "Auto kick is now " + next), mode.equals("kick"));
+    }
+
+    private static String kickLabel(String mode) {
+        return switch (mode) {
+            case "kick" -> "&cKick";
+            case "watch" -> "&aWatch";
+            default -> "&8Off";
         };
     }
 

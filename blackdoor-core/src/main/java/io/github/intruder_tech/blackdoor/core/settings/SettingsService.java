@@ -30,6 +30,7 @@ public final class SettingsService {
     public static final String NETWORK_MODE = "network.mode";
     public static final String AUTH_ENABLED = "auth.enabled";
     public static final String ADAPTIVE_MODE = "network.adaptive";
+    public static final String ENFORCEMENT_MODE = "enforcement.mode";
 
     /** One editable setting. Options are the exact values written to the file. */
     public record Setting(String id, String label, String description, ConfigFileSpec<?> spec, String path,
@@ -61,6 +62,9 @@ public final class SettingsService {
                 options(io.github.intruder_tech.blackdoor.network.NetworkSettings.Mode.values())));
         all.add(new Setting(AUTH_ENABLED, "Login system","Players must /signup and /signin.",
                 CoreConfig.AUTH, "enabled", List.of("false", "true")));
+        all.add(new Setting(ENFORCEMENT_MODE, "Auto kick", "Kicks players who keep getting blocked.",
+                CoreConfig.ENFORCEMENT, "mode",
+                options(io.github.intruder_tech.blackdoor.enforcement.EnforcementSettings.Mode.values())));
         this.settings = List.copyOf(all);
     }
 
@@ -85,6 +89,9 @@ public final class SettingsService {
         }
         if (setting.id().equals(ADAPTIVE_MODE)) {
             return value(engine.networkSettings().adaptive().mode());
+        }
+        if (setting.id().equals(ENFORCEMENT_MODE)) {
+            return value(engine.enforcementSettings().mode());
         }
         if (setting.id().equals(AUTH_ENABLED)) {
             return Boolean.toString(engine.authSettings().enabled());

@@ -57,6 +57,7 @@ include(
     "blackdoor-packets",
     "blackdoor-network",
     "blackdoor-auth",
+    "blackdoor-enforcement",
     "blackdoor-core",
     "blackdoor-platform-bukkit",
     "blackdoor-platform-paper",

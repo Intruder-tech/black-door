@@ -31,6 +31,16 @@ record BukkitPlatform(PlatformInfo info, PlatformScheduler scheduler, BdLogger l
     }
 
     @Override
+    public boolean kick(java.util.UUID playerId, String message) {
+        org.bukkit.entity.Player player = org.bukkit.Bukkit.getPlayer(playerId);
+        if (player == null || player.hasPermission("blackdoor.exempt.kick")) {
+            return false;
+        }
+        player.kickPlayer(message);
+        return true;
+    }
+
+    @Override
     public SecurityFacts securityFacts() {
         return BukkitEnvironment.securityFacts();
     }

@@ -86,9 +86,20 @@ class MenuTest {
         assertThat(s.shown.itemAt(10).orElseThrow().name()).contains("Protection").contains("OFF");
         assertThat(s.shown.items()).filteredOn(i -> i.name().contains("coming soon"))
                 .allSatisfy(i -> assertThat(i.action()).isNull())
-                .anySatisfy(i -> assertThat(i.name()).contains("Movement"));
+                .anySatisfy(i -> assertThat(i.name()).contains("Combat").doesNotContain("Movement"));
         assertThat(s.shown.itemAt(16).orElseThrow().name()).contains("X-Ray").contains("Unknown");
         assertThat(s.shown.itemAt(4)).as("setup reminder").isPresent();
+    }
+
+    @Test
+    void autoKickCyclesFromOffToWatchInTheMainMenu() throws Exception {
+        RecordingSender admin = RecordingSender.admin();
+        FakeSession s = new FakeSession(admin, engine.menus().main());
+        assertThat(s.shown.itemAt(31).orElseThrow().name()).contains("Auto kick").contains("Off");
+        s.click(31);
+        AwaitMessages.await(admin, m -> m.contains("Auto kick is now Watch"));
+        assertThat(engine.enforcementSettings().mode())
+                .isEqualTo(io.github.intruder_tech.blackdoor.enforcement.EnforcementSettings.Mode.WATCH);
     }
 
     @Test

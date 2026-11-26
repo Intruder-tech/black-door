@@ -5,15 +5,16 @@
 > blocked, and what needs the owner's decision.
 
 **Last updated:** 2026-11-26
-**Current phase:** Phase 4 — Exploit and network protection (owner override: started before Phase 2
-and 3 are complete)
-**Phase status:** Milestones 2.1, 2.2, 2.3 and 2.4a done. **2.4b (physics) paused by the owner** after
-step 1 (recorder). Phase 4: milestones 4.1 (exploit guards, first set) and 4.2 (backend connection
-protection) built, not yet committed (§14).
-**Protections active:** 12 packet checks and join/ping flood protection, **monitor mode by default**
+**Current phase:** Phase 5 — behaviour, correlation, enforcement (started 2026-11-26).
+**Phase status:** Phase 4 complete (§14). Phase 2 closed by the owner: **physics (2.4b) marked
+completed by owner decision although it is not functional** (height only, tests only, no movement
+detection). Phase 5: **5.1 auto kick built** (branch `feat/phase-5`, module `blackdoor-enforcement`,
+`enforcement.yml`, GUI item, off by default; unit tests only, not tried on a running server). Not
+built: temporary bans, quarantine, saved evidence, staff review. No statistical checks are planned
+while nothing would feed them.
+**Protections active:** 14 packet checks and join/ping flood protection, **monitor mode by default**
 (they log findings; they block only if set to `mitigate` and the global mode is `enforce`).
-**Next gate:** Owner review of 4.1/4.2 and a real player session (false-positive check for books,
-signs, creative items and mod messages).
+**Next gate:** Owner tries auto kick on the test server.
 
 ---
 
@@ -26,7 +27,7 @@ signs, creative items and mod messages).
 | 2 | Packet inspection, player state, physics | **Done** (closed by owner; physics not functional) | 2026-11-26 | 2026-11-26 (owner: "Mark Physics score as completed") |
 | 3 | Combat / movement / inventory / interaction detections | Not started | — | — |
 | 4 | Exploits, app-layer network protection, proxies | **Done** (§14) | 2026-11-26 | — |
-| 5 | Behavior analysis, correlation, enforcement | Not started | — | — |
+| 5 | Behavior analysis, correlation, enforcement | **In progress** (5.1 auto kick) | 2026-11-26 | — |
 | 6 | Storage, administration, telemetry, developer API | Not started | — | — |
 | 7 | Cross-version testing, security audit, optimization | Not started | — | — |
 | 8 | Release engineering, docs, deployment | Not started | — | — |
@@ -380,8 +381,7 @@ restart).
 
 ## 11. Next Steps
 
-1. Owner picks the next phase. Phase 3 without movement checks (combat, world, inventory) or Phase 5
-   (behaviour analysis, correlation, enforcement, quarantine).
+1. Phase 5: try auto kick live, then temporary bans, then saved evidence and staff review.
 2. Left over from Phase 2, not done: validator fuzzing and a per-packet latency benchmark.
 3. GUI refinements: deferred by the owner until the backend is complete.
 4. CI upkeep: bump GitHub Actions to Node-24 versions; add a CycloneDX SBOM and a Java 17 runtime job.

@@ -70,6 +70,8 @@ public final class BlackDoorEngine {
     private volatile ReloadResult lastReload;
     private volatile long startedAtMillis;
     private volatile ViolationLedger ledger;
+    private volatile io.github.intruder_tech.blackdoor.violations.FindingSink findings;
+    private static final String KICK_MESSAGE = "Kicked by Black Door: suspicious game client.";
     private volatile SessionRegistry sessions;
     private volatile PacketSecurityEngine packetEngine;
     private static final int SHAPES_PER_TICK = 500;
@@ -203,6 +205,7 @@ public final class BlackDoorEngine {
     /** Backend only: wires sessions, ledger and the packet engine to the packet library. */
     private void startPacketLayer() {
         ledger = new ViolationLedger(new RateLimitedLogger(logger, time, 3, 1, 256), 10_000, 200);
+        findings = enforcingSink(ledger);
         if (platform.info().type().isProxy()) {
             // Players connect to a proxy directly, so their addresses are real here.
             connectionGuard = newConnectionGuard(false);
@@ -213,7 +216,7 @@ public final class BlackDoorEngine {
             return;
         }
         sessions = new SessionRegistry(config.current().get(CoreConfig.CHECKS).maxSessions(), time);
-        packetEngine = new PacketSecurityEngine(sessions, ledger, time,
+        packetEngine = new PacketSecurityEngine(sessions, findings, time,
                 () -> config.current().get(CoreConfig.CHECKS),
                 () -> settings().mode() == GeneralSettings.Mode.ENFORCE,
                 platform.info().minecraft().orElse(null),
@@ -250,6 +253,50 @@ public final class BlackDoorEngine {
                 logger.error("Transaction heartbeat failed", e);
             }
         }, TRANSACTION_INTERVAL_MS, TRANSACTION_INTERVAL_MS, java.util.concurrent.TimeUnit.MILLISECONDS);
+    }
+
+    /** Records every finding, then acts on the player if the enforcement policy says so. */
+    private io.github.intruder_tech.blackdoor.violations.FindingSink enforcingSink(ViolationLedger records) {
+        var policy = new io.github.intruder_tech.blackdoor.enforcement.EnforcementPolicy(
+                this::enforcementSettings, 10_000);
+        return finding -> {
+            records.accept(finding);
+            try {
+                policy.accept(finding).ifPresent(this::act);
+            } catch (RuntimeException e) {
+                // Runs on a network thread: a fault here must never disturb the connection.
+                logger.error("Enforcement failed", e);
+            }
+        };
+    }
+
+    private void act(io.github.intruder_tech.blackdoor.enforcement.EnforcementPolicy.Decision decision) {
+        String name = io.github.intruder_tech.blackdoor.common.text.LogSanitizer
+                .sanitize(decision.subject().displayName(), 32);
+        String why = " (" + decision.findings() + " findings, last " + decision.checkId() + ")";
+        if (!decision.kick()) {
+            logger.info("Would kick " + name + why + "; enforcement mode is watch.");
+            return;
+        }
+        java.util.UUID id = decision.subject().uniqueId();
+        platform.scheduler().runForPlayer(id, () -> {
+            if (platform.kick(id, KICK_MESSAGE)) {
+                logger.warn("Kicked " + name + why + ".");
+                AuditLog currentAudit = audit;
+                if (currentAudit != null) {
+                    currentAudit.record("system", "enforcement.kick " + name, decision.checkId());
+                }
+            }
+        });
+    }
+
+    /** Where checks report. Null only before {@link #enable()}. */
+    public io.github.intruder_tech.blackdoor.violations.FindingSink findings() {
+        return findings;
+    }
+
+    public io.github.intruder_tech.blackdoor.enforcement.EnforcementSettings enforcementSettings() {
+        return config.current().get(CoreConfig.ENFORCEMENT);
     }
 
     /** Builds the block shape table on the server thread, a batch per tick. */

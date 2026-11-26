@@ -22,7 +22,11 @@ public final class CoreConfig {
             new ConfigFileSpec<>("auth.yml", 1, "blackdoor-defaults/auth.yml", List.of(),
                     io.github.intruder_tech.blackdoor.auth.AuthSettings::parse);
 
-    public static final List<ConfigFileSpec<?>> ALL = List.of(GENERAL, CHECKS, NETWORK, AUTH);
+    public static final ConfigFileSpec<io.github.intruder_tech.blackdoor.enforcement.EnforcementSettings>
+            ENFORCEMENT = new ConfigFileSpec<>("enforcement.yml", 1, "blackdoor-defaults/enforcement.yml", List.of(),
+                    io.github.intruder_tech.blackdoor.enforcement.EnforcementSettings::parse);
+
+    public static final List<ConfigFileSpec<?>> ALL = List.of(GENERAL, CHECKS, NETWORK, AUTH, ENFORCEMENT);
 
     private CoreConfig() {
     }

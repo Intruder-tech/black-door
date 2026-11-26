@@ -48,6 +48,15 @@ public interface Platform {
         return null;
     }
 
+    /**
+     * Disconnects an online player with a message; call on that player's thread
+     * ({@link PlatformScheduler#runForPlayer}). Returns false if nobody was kicked: offline, exempt,
+     * or not supported here.
+     */
+    default boolean kick(java.util.UUID playerId, String message) {
+        return false;
+    }
+
     /** In-game menus, where the platform supports them (Bukkit-family servers). */
     default java.util.Optional<io.github.intruder_tech.blackdoor.core.menu.MenuPresenter> menus() {
         return java.util.Optional.empty();

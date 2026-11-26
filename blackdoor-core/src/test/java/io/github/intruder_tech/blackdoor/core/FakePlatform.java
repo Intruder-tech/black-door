@@ -21,6 +21,12 @@ public final class FakePlatform implements Platform {
 
     public final List<String> log = new CopyOnWriteArrayList<>();
     public final AtomicInteger cancelAllCalls = new AtomicInteger();
+    public final List<String> kicked = new CopyOnWriteArrayList<>();
+
+    @Override
+    public boolean kick(UUID playerId, String message) {
+        return kicked.add(playerId + " " + message);
+    }
     public io.github.intruder_tech.blackdoor.core.platform.SecurityFacts facts =
             io.github.intruder_tech.blackdoor.core.platform.SecurityFacts.UNKNOWN;
 
