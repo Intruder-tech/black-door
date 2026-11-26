@@ -81,7 +81,9 @@ public final class ShapeTableBuilder {
 
     private static boolean special(String name) {
         String block = block(name);
-        return SPECIAL.contains(block) || block.endsWith("_bed") || name.contains("waterlogged=true");
+        return SPECIAL.contains(block) || block.endsWith("_bed") || name.contains("waterlogged=true")
+                // An open trapdoor above a ladder can be climbed.
+                || block.endsWith("_trapdoor") && name.contains("open=true");
     }
 
     /** The block id without namespace and properties. */

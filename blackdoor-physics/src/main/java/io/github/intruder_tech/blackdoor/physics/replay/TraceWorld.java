@@ -136,6 +136,26 @@ public final class TraceWorld {
         return Optional.of(new Clip(result, collided));
     }
 
+    /** False when the box at this place already overlaps a block, so the client is in another pose. */
+    public boolean free(BlockShapes shapes, double x, double y, double z, double height) {
+        for (int by = floor(y) - 1; by <= floor(y + height); by++) {
+            for (int bx = floor(x - HALF_WIDTH + EPSILON); bx <= floor(x + HALF_WIDTH - EPSILON); bx++) {
+                for (int bz = floor(z - HALF_WIDTH + EPSILON); bz <= floor(z + HALF_WIDTH - EPSILON); bz++) {
+                    int id = block(bx, by, bz).orElse(-1);
+                    for (BlockShapes.Box box : shapes.boxes(id).orElse(List.of())) {
+                        if (bx + box.maxX() > x - HALF_WIDTH + EPSILON && bx + box.minX() < x + HALF_WIDTH - EPSILON
+                                && bz + box.maxZ() > z - HALF_WIDTH + EPSILON
+                                && bz + box.minZ() < z + HALF_WIDTH - EPSILON
+                                && by + box.maxY() > y + 1e-3 && by + box.minY() < y + height - 1e-3) {
+                            return false;
+                        }
+                    }
+                }
+            }
+        }
+        return true;
+    }
+
     /** The highest box top above {@code from} and up to {@code to} under the player's box at this place. */
     public OptionalDouble top(BlockShapes shapes, double x, double z, double from, double to) {
         double highest = Double.NEGATIVE_INFINITY;

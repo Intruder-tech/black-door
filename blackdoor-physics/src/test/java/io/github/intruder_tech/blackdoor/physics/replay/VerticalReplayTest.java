@@ -83,9 +83,10 @@ class VerticalReplayTest {
             v = (v - 0.08) * 0.98;
             y += v;
         }
+        fall.add(1, event("k=velocity", "y=-0.0784"));
         var fallen = replay(fall.toArray(String[]::new));
         assertThat(fallen.misses()).isZero();
-        assertThat(fallen.matches()).isEqualTo(4);
+        assertThat(fallen.matches()).isEqualTo(5);
 
         var jump = replay(move(11, true), move(11, true), "{\"k\":\"input\",\"jump\":true}", move(11.42, false),
                 move(11.42 + 0.3332, false));
@@ -123,6 +124,68 @@ class VerticalReplayTest {
                 "{\"k\":\"block\",\"x\":6,\"y\":11,\"z\":5,\"id\":4}", move(11, true), move(11, true), step);
         assertThat(result.misses()).isZero();
         assertThat(result.matches()).isEqualTo(2);
+    }
+
+    /** One event line from "key=value" pairs; numbers, booleans and [] are written bare. */
+    private static String event(String... pairs) {
+        StringBuilder line = new StringBuilder("{");
+        for (String pair : pairs) {
+            String[] kv = pair.split("=", 2);
+            boolean bare = kv[1].matches("-?[0-9.]+|true|false|\\[\\]");
+            line.append(line.length() > 1 ? "," : "").append('"').append(kv[0]).append("\":")
+                    .append(bare ? kv[1] : '"' + kv[1] + '"');
+        }
+        return line.append('}').toString();
+    }
+
+    @Test
+    void claimingToBeOnTheGroundInTheAirIsAMiss() throws IOException {
+        var result = replay(move(11, true), move(11, true), event("k=input", "jump=true"), move(11.42, true),
+                move(11.84, true));
+        assertThat(result.misses()).isEqualTo(2);
+    }
+
+    @Test
+    void aFlyingPacketCountsOnlyWhenTheServerAllowsFlight() throws IOException {
+        String flying = event("k=flying", "flying=true");
+        var cheat = replay(flying, move(20, false), move(20, false), move(20, false), move(20, false));
+        assertThat(cheat.misses()).isEqualTo(2);
+        var allowed = replay(event("k=abilities", "flying=false", "allowed=true"), flying, move(20, false),
+                move(20, false), move(20, false), move(20, false));
+        assertThat(allowed.misses()).isZero();
+        assertThat(allowed.noVerdict()).containsEntry("flying", 3);
+    }
+
+    @Test
+    void knockbackIsPredictedNotSkipped() throws IOException {
+        var result = replay(move(11, true), move(11, true), event("k=velocity", "y=0.3"), move(11.3, false),
+                move(11.5156, false));
+        assertThat(result.misses()).isZero();
+        assertThat(result.matches()).isEqualTo(3);
+        var hover = replay(move(11, true), move(11, true), event("k=velocity", "y=0.3"), move(14, false),
+                move(14, false));
+        assertThat(hover.misses()).isPositive();
+    }
+
+    @Test
+    void aRiseNoJumpCouldGiveIsAMissEvenWhenTheSpeedIsUnknown() throws IOException {
+        assertThat(replay(move(20, false), move(21.5, false)).misses()).isEqualTo(1);
+    }
+
+    @Test
+    void changedJumpAttributesGiveNoVerdict() throws IOException {
+        var result = replay(event("k=attribute", "name=minecraft:jump_strength", "base=0.8", "modifiers=[]"),
+                move(11, true), move(11, true), move(11.8, false));
+        assertThat(result.misses()).isZero();
+        assertThat(result.noVerdict()).containsKey("attribute");
+    }
+
+    @Test
+    void aBodyThatDoesNotFitStandingGivesNoVerdict() throws IOException {
+        var result = replay(event("k=block", "x=5", "y=12", "z=5", "id=1"), move(11, true), move(11, true),
+                move(11.2, false));
+        assertThat(result.misses()).isZero();
+        assertThat(result.noVerdict()).containsKey("pose");
     }
 
     private static Path testData(String path) {

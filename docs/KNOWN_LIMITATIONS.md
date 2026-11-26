@@ -31,6 +31,10 @@
 
 ### Current implementation gaps (connection protection and exploit guards)
 
+- Movement prediction is height only and runs only in tests. Before it may judge a live player it
+  still needs: server changes (effects, velocity, abilities, blocks) applied when the client
+  acknowledges them; the client's own block placing and breaking; the worn chest item, because a
+  claimed elytra flight gets no verdict; and teleport confirmations matched by id.
 - Block shapes for movement prediction come from the running server: none on servers without
   `getCollisionShape`, none for blocks whose shape depends on position or player (scaffolding,
   powder snow, bamboo, pointed dripstone, moving pistons, shulker boxes), and clients older than

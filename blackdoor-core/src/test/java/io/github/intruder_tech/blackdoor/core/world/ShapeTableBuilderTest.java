@@ -13,7 +13,8 @@ class ShapeTableBuilderTest {
     @Test
     void marksBlocksThatMoveAPlayerDifferently() {
         List<String> states = List.of("minecraft:water[level=0]", "minecraft:oak_slab[type=bottom,waterlogged=true]",
-                "minecraft:red_bed[part=foot]", "minecraft:stone", "minecraft:ladder[facing=north]");
+                "minecraft:red_bed[part=foot]", "minecraft:stone", "minecraft:ladder[facing=north]",
+                "minecraft:oak_trapdoor[open=true]", "minecraft:oak_trapdoor[open=false]");
         BlockShapes into = new BlockShapes();
         new ShapeTableBuilder(id -> id < states.size() ? Optional.of(states.get(id)) : Optional.empty(),
                 name -> Optional.of(List.of()), into, 100).step();
@@ -22,6 +23,8 @@ class ShapeTableBuilderTest {
         assertThat(into.special(2)).isTrue();
         assertThat(into.special(3)).isFalse();
         assertThat(into.special(4)).isTrue();
+        assertThat(into.special(5)).as("open trapdoors can be climbed").isTrue();
+        assertThat(into.special(6)).isFalse();
     }
 
     @Test

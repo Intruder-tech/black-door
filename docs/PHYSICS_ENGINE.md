@@ -70,6 +70,8 @@ other projects (clean-room policy).
 - Jump: 0.42, plus 0.1 per jump boost level.
 - Vertical movement is resolved at the old horizontal position; a landing or grounded player then
   steps up to 0.6 onto a block at the new position.
+- Being on the ground is worked out from the blocks; a disagreeing client claim is a miss.
+- Knockback shows up as exactly the sent vertical velocity, followed by normal gravity.
 - The tick after moving through water still carries water drag, so it gets no verdict.
 
 Only height is predicted so far, only in tests (`blackdoor-physics`). Horizontal movement,
