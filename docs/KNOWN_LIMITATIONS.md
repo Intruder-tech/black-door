@@ -49,6 +49,12 @@
   PacketEvents has decoded the item, so a decoder crash would happen first. Written-book text and
   other non-tag components count as one element.
 - The game-mode check stays silent if the plugin was loaded while the player was already online.
+- Sign, book, plugin-message and chat packets over the protocol's own limits cannot be decoded by
+  PacketEvents. They are reported by type, without sizes. A decoder fault on a new Minecraft
+  version would look the same, so keep a check on Watch after upgrading until it stays quiet.
+- With such a check on Watch the server itself disconnects the sender; the disconnect reason it
+  logs can name an unrelated packet.
+- Flood mitigation never drops replies the server waits for (keep-alive, teleport confirm).
 
 ## Engineering
 16. **World view memory** at high player counts is unresolved (OD-3).

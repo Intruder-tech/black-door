@@ -16,6 +16,7 @@ import io.github.intruder_tech.blackdoor.protocol.packet.ConnectionInfo;
 import io.github.intruder_tech.blackdoor.protocol.packet.ConnectionState;
 import io.github.intruder_tech.blackdoor.protocol.packet.PacketHandler;
 import io.github.intruder_tech.blackdoor.protocol.packet.PacketVerdict;
+import io.github.intruder_tech.blackdoor.protocol.packet.ServerboundPacket;
 
 import java.util.concurrent.atomic.LongAdder;
 
@@ -45,11 +46,30 @@ final class BlackDoorPacketListener implements PacketListener {
                 return;
             }
             int size = event.getByteBuf() == null ? -1 : ByteBufHelper.readableBytes(event.getByteBuf());
-            if (handler.onInbound(info, state, size, PacketTranslator.inbound(event)) == PacketVerdict.DROP) {
+            ServerboundPacket packet = translate(event);
+            if (packet != null && handler.onInbound(info, state, size, packet) == PacketVerdict.DROP) {
                 event.setCancelled(true);
             }
         } catch (RuntimeException e) {
             translationErrors.increment();
+        }
+    }
+
+    /**
+     * The packet library enforces the protocol's own limits while decoding, so an over-limit packet
+     * fails here and is reported by type instead.
+     *
+     * @return null if the packet could not be decoded and is not of a type worth reporting
+     */
+    private ServerboundPacket translate(PacketReceiveEvent event) {
+        try {
+            return PacketTranslator.inbound(event);
+        } catch (RuntimeException e) {
+            ServerboundPacket packet = PacketTranslator.undecodable(event.getPacketType());
+            if (packet == null) {
+                translationErrors.increment();
+            }
+            return packet;
         }
     }
 

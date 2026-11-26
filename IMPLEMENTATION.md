@@ -344,7 +344,12 @@ The owner confirmed the login system works in game; the server log held no passw
 `packet.game-mode` (creative action outside creative mode), each with a GUI item. Diagnostics and
 the GUI Status item show how many packets could not be decoded. 226 unit tests. Owner play test on
 Paper 26.3 with creative and survival use: 19,833 packets, 0 unreadable, 0 findings.
-**Not verified:** against a modded client.
+
+**4.6 scripted-client test (Paper 1.21.11, offline mode, localhost):** found that over-limit sign,
+book, payload and chat packets were never reported (PacketEvents rejects them while decoding), and
+that flood mitigation dropped keep-alive replies and disconnected the player. Both fixed; all 17
+cases pass with checks on Watch and again on Block. 230 unit tests.
+**Not verified:** the scripted client on 26.3 (the library stops at 26.1), or a real hacked client.
 
 **Remaining in Phase 4:** bot scoring, quarantine, adaptive mode, anti-xray, edge agent.
 See docs/KNOWN_LIMITATIONS.md.

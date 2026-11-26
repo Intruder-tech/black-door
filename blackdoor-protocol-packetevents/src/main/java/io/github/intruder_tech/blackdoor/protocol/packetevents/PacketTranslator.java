@@ -121,7 +121,34 @@ final class PacketTranslator {
             return new ServerboundPacket.CreativeItem(w.getSlot(), empty ? 0 : item.getAmount(), size.depth(),
                     size.elements());
         }
+        if (type == PacketType.Play.Client.KEEP_ALIVE || type == PacketType.Play.Client.CHUNK_BATCH_ACK
+                || type == PacketType.Play.Client.CHAT_ACK || type == PacketType.Play.Client.CONFIGURATION_ACK
+                || type == PacketType.Play.Client.PLAYER_LOADED || type == PacketType.Play.Client.RESOURCE_PACK_STATUS
+                || type == PacketType.Play.Client.COOKIE_RESPONSE) {
+            return new ServerboundPacket.Reply(type.getName());
+        }
         return new ServerboundPacket.Other(type == null ? "unknown" : type.getName());
+    }
+
+    /** What to report when decoding an inspected packet failed, or null if the type is not reported. */
+    static ServerboundPacket undecodable(PacketTypeCommon type) {
+        ServerboundPacket.Undecodable.Kind kind = null;
+        if (type == PacketType.Play.Client.UPDATE_SIGN) {
+            kind = ServerboundPacket.Undecodable.Kind.SIGN;
+        } else if (type == PacketType.Play.Client.EDIT_BOOK) {
+            kind = ServerboundPacket.Undecodable.Kind.BOOK;
+        } else if (type == PacketType.Play.Client.PLUGIN_MESSAGE) {
+            kind = ServerboundPacket.Undecodable.Kind.PAYLOAD;
+        } else if (type == PacketType.Play.Client.CHAT_MESSAGE) {
+            kind = ServerboundPacket.Undecodable.Kind.CHAT;
+        } else if (type == PacketType.Play.Client.CHAT_COMMAND) {
+            kind = ServerboundPacket.Undecodable.Kind.COMMAND;
+        } else if (type == PacketType.Play.Client.TAB_COMPLETE) {
+            kind = ServerboundPacket.Undecodable.Kind.TAB_COMPLETE;
+        } else if (type == PacketType.Play.Client.CREATIVE_INVENTORY_ACTION) {
+            kind = ServerboundPacket.Undecodable.Kind.CREATIVE_ITEM;
+        }
+        return kind == null ? null : new ServerboundPacket.Undecodable(kind);
     }
 
     /** What nests inside a piece of item data: tags, components and the items stored in items. */

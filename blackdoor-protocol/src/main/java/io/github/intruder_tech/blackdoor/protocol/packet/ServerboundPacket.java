@@ -62,6 +62,18 @@ public sealed interface ServerboundPacket {
         }
     }
 
+    /** An answer the server is waiting for (keep-alive and the like). Flood mitigation never drops it. */
+    record Reply(String typeName) implements ServerboundPacket {
+    }
+
+    /**
+     * A packet of an inspected type that could not be decoded, typically because it exceeds the
+     * protocol's own limits.
+     */
+    record Undecodable(Kind kind) implements ServerboundPacket {
+        public enum Kind { SIGN, BOOK, PAYLOAD, CHAT, COMMAND, TAB_COMPLETE, CREATIVE_ITEM }
+    }
+
     /** Any other packet; only counted for rate and size. */
     record Other(String typeName) implements ServerboundPacket {
     }

@@ -117,7 +117,13 @@ public final class PacketSecurityEngine implements PacketHandler {
     private boolean inspect(PlayerSession session, PacketSettings cfg, int wireSize, ServerboundPacket packet, long now) {
         FloodState flood = session.attachment(FLOOD, () -> new FloodState(cfg, now));
         boolean drop = rate(session, cfg, flood, FloodState.Category.TOTAL, now);
-        if (packet instanceof ServerboundPacket.Movement m) {
+        // Replies the server waits for still count towards the rate, but dropping one disconnects the player.
+        if (packet instanceof ServerboundPacket.Reply || packet instanceof ServerboundPacket.TeleportConfirm) {
+            drop = false;
+        }
+        if (packet instanceof ServerboundPacket.Undecodable u) {
+            drop |= undecodable(session, cfg, u.kind());
+        } else if (packet instanceof ServerboundPacket.Movement m) {
             drop |= rate(session, cfg, flood, FloodState.Category.MOVEMENT, now);
             drop |= movement(session, cfg, wireSize, m);
         } else if (packet instanceof ServerboundPacket.TeleportConfirm t) {
@@ -147,6 +153,18 @@ public final class PacketSecurityEngine implements PacketHandler {
             drop |= exploits(session, cfg, wireSize, packet, now);
         }
         return drop;
+    }
+
+    private boolean undecodable(PlayerSession session, PacketSettings cfg, ServerboundPacket.Undecodable.Kind kind) {
+        PacketCheck check = switch (kind) {
+            case SIGN -> PacketCheck.SIGN;
+            case BOOK -> PacketCheck.BOOK;
+            case PAYLOAD -> PacketCheck.PAYLOAD;
+            case CHAT, COMMAND, TAB_COMPLETE -> PacketCheck.OVERSIZED;
+            case CREATIVE_ITEM -> PacketCheck.CREATIVE_ITEM;
+        };
+        return report(session, cfg, check, kind.name().toLowerCase(java.util.Locale.ROOT)
+                + " packet could not be decoded (over the protocol's limits)");
     }
 
     /** Exploit guards (docs/EXPLOIT_PREVENTION.md). Details carry numbers only, never client text. */
