@@ -53,8 +53,9 @@ class MenuTest {
 
         @Override
         public synchronized void refresh() {
-            refreshes.incrementAndGet();
             shown = page.build(this);
+            // Counted last: the test thread reads "shown" as soon as the count changes.
+            refreshes.incrementAndGet();
         }
 
         @Override
