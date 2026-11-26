@@ -129,6 +129,8 @@ public final class BlackDoorEngine {
         }
         lifecycle = EngineState.STARTING;
         startedAtMillis = time.currentTimeMillis();
+        logger.info("Initializing Black Door " + platform.pluginVersion() + " on " + platform.info().type()
+                + " - Made in India. Guard your world.");
         try {
             lastReload = config.load();
             report(lastReload, "Configuration");

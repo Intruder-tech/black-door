@@ -40,6 +40,14 @@ class EngineLifecycleTest {
     }
 
     @Test
+    void announcesInitializationBeforeAnythingElse() {
+        FakePlatform platform = FakePlatform.paper(dir);
+        engine = new BlackDoorEngine(platform, TimeSource.system());
+        engine.enable();
+        assertThat(platform.log.get(0)).startsWith("INFO Initializing Black Door 0.0.0-test on PAPER");
+    }
+
+    @Test
     void disableStopsThreadsUnregistersApiAndCancelsTasks() throws Exception {
         FakePlatform platform = FakePlatform.paper(dir);
         engine = new BlackDoorEngine(platform, TimeSource.system());
