@@ -108,6 +108,17 @@ class BanBookTest {
     }
 
     @Test
+    void forgettingAPlayerClearsBanAndCount() {
+        BanBook book = book();
+        for (int i = 0; i < 3; i++) {
+            book.recordKick(id, "tester", rules);
+        }
+        book.forget(id);
+        assertThat(book.active(id)).isEmpty();
+        assertThat(book.nextKickBans(id, rules)).isFalse();
+    }
+
+    @Test
     void damagedLinesAreSkippedAndCounted() throws IOException {
         Files.writeString(dir.resolve("bans.tsv"), "nonsense\nban\tnot-a-uuid\t5\tx\n"
                 + "ban\t" + id + "\t" + (time.currentTimeMillis() + 60_000) + "\ttester\n");

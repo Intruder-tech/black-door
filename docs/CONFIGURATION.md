@@ -161,6 +161,13 @@ page "Punishments" switches the length (Off, 15 minutes, 1 hour, 1 day) and unba
 `blackdoor.command.bans`). Bans are kept in `enforcement/bans.tsv`, not in the server's ban list,
 survive a restart, and last until they run out or are lifted, even if Auto kick is switched off.
 
+**Cases:** every kick, ban and (in watch) would-be kick is saved with up to 10 findings behind it,
+the newest 200 in `enforcement/cases.tsv`, without addresses. Watch mode saves at most one case per
+player every 10 minutes. `/blackdoor cases`, `/blackdoor cases <n>` and the GUI page "Review cases"
+show them (`blackdoor.command.cases`). `/blackdoor cases <n> false|real` or a click records the staff
+verdict (command: `blackdoor.command.bans`; GUI: `blackdoor.gui.edit`). "False alarm" on a kick or
+ban also drops that player's ban and kick count.
+
 ## 3. Profiles (intent)
 
 | Profile | Intent |

@@ -85,6 +85,34 @@ class EnforcementWiringTest {
     }
 
     @Test
+    void everyActionIsSavedAsACaseAndAFalseAlarmLiftsTheBan() {
+        set("mode", "kick");
+        set("ban-after-kicks", "1");
+        set("ban-minutes", "60");
+        blockedFindings(5);
+        var staff = new io.github.intruder_tech.blackdoor.core.command.RecordingSender("Mod",
+                java.util.Set.of("blackdoor.command.cases", "blackdoor.command.bans"));
+        engine.commands().dispatch(staff, new String[]{"cases"});
+        assertThat(staff.all()).contains("#1").contains("tester").contains("banned");
+        engine.commands().dispatch(staff, new String[]{"cases", "1"});
+        assertThat(staff.all()).contains("packet.sign");
+        engine.commands().dispatch(staff, new String[]{"cases", "1", "false"});
+        assertThat(staff.all()).contains("false alarm");
+        assertThat(engine.banMessage(id)).isEmpty();
+        assertThat(engine.cases().orElseThrow().find(1).orElseThrow().falseAlarm()).isTrue();
+    }
+
+    @Test
+    void readingCasesDoesNotAllowJudgingThem() {
+        set("mode", "kick");
+        blockedFindings(5);
+        var reader = new io.github.intruder_tech.blackdoor.core.command.RecordingSender("Helper",
+                java.util.Set.of("blackdoor.command.cases"));
+        engine.commands().dispatch(reader, new String[]{"cases", "1", "false"});
+        assertThat(engine.cases().orElseThrow().find(1).orElseThrow().falseAlarm()).isFalse();
+    }
+
+    @Test
     void watchModeOnlyLogs() {
         set("mode", "watch");
         blockedFindings(5);

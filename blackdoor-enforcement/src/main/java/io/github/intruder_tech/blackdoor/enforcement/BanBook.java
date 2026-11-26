@@ -110,6 +110,12 @@ public final class BanBook {
         return !found.isEmpty();
     }
 
+    /** Drops this player's ban and kick count. */
+    public synchronized void forget(UUID id) {
+        bans.remove(id);
+        kicks.remove(id);
+    }
+
     public synchronized int unreadableLines() {
         return unreadableLines;
     }

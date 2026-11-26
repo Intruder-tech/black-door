@@ -11,9 +11,13 @@ completed by owner decision although it is not functional** (height only, tests 
 detection). Phase 5: **5.1 auto kick built** (branch `feat/phase-5`, module `blackdoor-enforcement`,
 `enforcement.yml`, GUI item, off by default). **5.2 temporary bans built** (branch
 `feat/temp-bans`: `enforcement/bans.tsv`, GUI "Punishments" page, `/blackdoor bans`, off by
-default). Both have unit tests only; no kick or ban has happened on a running server. Not built:
-quarantine, saved evidence, staff review. No statistical checks are planned while nothing would
-feed them.
+default). Live-tested 2026-11-26 with a scripted client on a local Paper 1.21.11 server (offline
+mode): watch kicked nobody; bad packets kicked, also an operator; the second kick banned; the banned
+name was refused at login, also after a restart; unban let it back; a heuristic check never kicked;
+no errors logged. Not tried: Paper 26.3, Folia, legacy servers, online mode, the exempt permission,
+the Punishments page in game. **5.3 saved cases and staff review built** (branch `feat/cases`:
+`enforcement/cases.tsv`, `/blackdoor cases`, GUI "Review cases"; unit tests only, not run live).
+Not built: quarantine. No statistical checks are planned while nothing would feed them.
 **Protections active:** 14 packet checks and join/ping flood protection, **monitor mode by default**
 (they log findings; they block only if set to `mitigate` and the global mode is `enforce`).
 **Next gate:** Owner tries auto kick on the test server.

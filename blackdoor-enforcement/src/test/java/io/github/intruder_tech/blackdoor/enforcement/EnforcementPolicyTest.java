@@ -32,8 +32,11 @@ class EnforcementPolicyTest {
     void kicksOnceEnoughBlockedFindingsFallInsideTheWindow() {
         assertThat(blocked(Confidence.DETERMINISTIC, 0)).isEmpty();
         assertThat(blocked(Confidence.HIGH, 1)).isEmpty();
-        assertThat(blocked(Confidence.DETERMINISTIC, 2))
-                .contains(new EnforcementPolicy.Decision(PLAYER, "packet.sign", 3, true));
+        assertThat(blocked(Confidence.DETERMINISTIC, 2)).hasValueSatisfying(d -> {
+            assertThat(d.kick()).isTrue();
+            assertThat(d.findings()).isEqualTo(3);
+            assertThat(d.evidence()).extracting(Finding::timeMillis).containsExactly(0L, 1000L, 2000L);
+        });
         assertThat(blocked(Confidence.DETERMINISTIC, 3)).as("count starts again").isEmpty();
     }
 
@@ -63,7 +66,10 @@ class EnforcementPolicyTest {
     void watchModeReportsWhatWouldHaveHappenedWithoutKicking() {
         settings = new EnforcementSettings(WATCH, 2, 60);
         watched(0);
-        assertThat(watched(1)).contains(new EnforcementPolicy.Decision(PLAYER, "packet.sign", 2, false));
+        assertThat(watched(1)).hasValueSatisfying(d -> {
+            assertThat(d.kick()).isFalse();
+            assertThat(d.findings()).isEqualTo(2);
+        });
     }
 
     @Test

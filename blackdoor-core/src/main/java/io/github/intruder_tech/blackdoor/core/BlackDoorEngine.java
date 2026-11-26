@@ -73,6 +73,7 @@ public final class BlackDoorEngine {
     private volatile io.github.intruder_tech.blackdoor.violations.FindingSink findings;
     private static final String KICK_MESSAGE = "Kicked by Black Door: suspicious game client.";
     private volatile io.github.intruder_tech.blackdoor.enforcement.BanBook bans;
+    private volatile io.github.intruder_tech.blackdoor.enforcement.CaseBook cases;
     private volatile SessionRegistry sessions;
     private volatile PacketSecurityEngine packetEngine;
     private static final int SHAPES_PER_TICK = 500;
@@ -114,6 +115,7 @@ public final class BlackDoorEngine {
                 new ReloadCommand(this),
                 new io.github.intruder_tech.blackdoor.core.command.sub.AuthCommand(this),
                 new io.github.intruder_tech.blackdoor.core.command.sub.BansCommand(this),
+                new io.github.intruder_tech.blackdoor.core.command.sub.CasesCommand(this),
                 new DiagnosticsCommand(this)), logger);
         this.api = platform::pluginVersion;
     }
@@ -214,6 +216,11 @@ public final class BlackDoorEngine {
             if (bans.unreadableLines() > 0) {
                 logger.warn("enforcement/bans.tsv: " + bans.unreadableLines() + " unreadable line(s) ignored.");
             }
+            cases = new io.github.intruder_tech.blackdoor.enforcement.CaseBook(
+                    platform.dataDirectory().resolve("enforcement").resolve("cases.tsv"), time);
+            if (cases.unreadableLines() > 0) {
+                logger.warn("enforcement/cases.tsv: " + cases.unreadableLines() + " unreadable line(s) ignored.");
+            }
         }
         if (platform.info().type().isProxy()) {
             // Players connect to a proxy directly, so their addresses are real here.
@@ -285,6 +292,7 @@ public final class BlackDoorEngine {
         String why = " (" + decision.findings() + " findings, last " + decision.checkId() + ")";
         if (!decision.kick()) {
             logger.info("Would kick " + name + why + "; enforcement mode is watch.");
+            openCase(decision, name, io.github.intruder_tech.blackdoor.enforcement.CaseBook.Action.WOULD_KICK);
             return;
         }
         java.util.UUID id = decision.subject().uniqueId();
@@ -297,15 +305,67 @@ public final class BlackDoorEngine {
             }
             logger.warn("Kicked " + name + why + ".");
             record("system", "enforcement.kick " + name, decision.checkId());
-            if (book == null) {
-                return;
-            }
-            book.recordKick(id, name, rules).ifPresent(b -> {
+            var banned = book == null ? Optional.empty() : book.recordKick(id, name, rules);
+            if (banned.isPresent()) {
                 logger.warn("Banned " + name + " for " + rules.banMinutes() + " minutes.");
                 record("system", "enforcement.ban " + name, rules.banMinutes() + " minutes");
-            });
+            }
             saveBans();
+            openCase(decision, name, banned.isPresent()
+                    ? io.github.intruder_tech.blackdoor.enforcement.CaseBook.Action.BAN
+                    : io.github.intruder_tech.blackdoor.enforcement.CaseBook.Action.KICK);
         });
+    }
+
+    private void openCase(io.github.intruder_tech.blackdoor.enforcement.EnforcementPolicy.Decision decision,
+                          String name, io.github.intruder_tech.blackdoor.enforcement.CaseBook.Action action) {
+        var book = cases;
+        if (book != null) {
+            book.open(decision.subject().uniqueId(), name, action, decision.evidence());
+            saveCases();
+        }
+    }
+
+    private void saveCases() {
+        var book = cases;
+        if (book == null) {
+            return;
+        }
+        boolean queued = submitWork(() -> {
+            try {
+                book.save();
+            } catch (java.io.IOException e) {
+                logger.error("Could not save enforcement cases; the latest will be lost on restart.", e);
+            }
+        });
+        if (!queued) {
+            logger.warn("Too busy to save enforcement cases now.");
+        }
+    }
+
+    /** Saved cases for staff review; empty on proxies. */
+    public Optional<io.github.intruder_tech.blackdoor.enforcement.CaseBook> cases() {
+        return Optional.ofNullable(cases);
+    }
+
+    /**
+     * Records the staff verdict on a case. Calling a kick or ban a false alarm also drops that
+     * player's ban and kick count. Returns false if there is no such case.
+     */
+    public boolean judgeCase(int caseId, boolean falseAlarm, String actor) {
+        var judged = cases().flatMap(book -> book.markFalseAlarm(caseId, falseAlarm));
+        if (judged.isEmpty()) {
+            return false;
+        }
+        var found = judged.get();
+        if (falseAlarm && found.action() != io.github.intruder_tech.blackdoor.enforcement.CaseBook.Action.WOULD_KICK
+                && bans != null) {
+            bans.forget(found.player());
+            saveBans();
+        }
+        record(actor, "enforcement.case " + caseId + " " + found.name(), falseAlarm ? "false alarm" : "confirmed");
+        saveCases();
+        return true;
     }
 
     private static String banText(java.time.Duration left) {

@@ -45,6 +45,11 @@ final class MenuItems {
         put(Icon.AUTO_KICK, "IRON_BOOTS");
         put(Icon.TEMP_BAN, "IRON_BARS", "IRON_FENCE");
         put(Icon.BANNED_PLAYER, "NAME_TAG");
+        put(Icon.CASES, "BOOKSHELF");
+        put(Icon.CASE_WATCH, "PAPER");
+        put(Icon.CASE_KICK, "BOOK");
+        put(Icon.CASE_BAN, "WRITABLE_BOOK", "BOOK_AND_QUILL");
+        put(Icon.CASE_FALSE, "FEATHER");
         put(Icon.POSITION, "ENDER_PEARL");
         put(Icon.ROTATION, "ENDER_EYE", "EYE_OF_ENDER");
         put(Icon.SLOT, "COPPER_INGOT", "IRON_INGOT");

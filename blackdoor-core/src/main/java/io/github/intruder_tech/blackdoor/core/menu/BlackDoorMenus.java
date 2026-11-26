@@ -158,6 +158,8 @@ public final class BlackDoorMenus {
         return session -> {
             List<MenuItem> items = new ArrayList<>();
             items.add(autoKickItem(11));
+            items.add(new MenuItem(13, Icon.CASES, "&fReview cases",
+                    List.of("&7Who was kicked or banned, and why.", "", "&eClick to open"), s -> s.show(cases())));
             items.add(banLengthItem(15));
             var banned = engine.bans().map(b -> b.active()).orElse(List.of());
             long now = engine.time().currentTimeMillis();
@@ -174,6 +176,56 @@ public final class BlackDoorMenus {
             items.add(new MenuItem(31, Icon.BACK, "&7Back", List.of(), s -> s.show(main())));
             return new Menu("Black Door - Punishments", 4, items);
         };
+    }
+
+    /** The newest cases; clicking one flips the staff verdict. */
+    public MenuPage cases() {
+        return session -> {
+            List<MenuItem> items = new ArrayList<>();
+            var newest = engine.cases().map(b -> b.newest(14)).orElse(List.of());
+            for (int i = 0; i < newest.size(); i++) {
+                items.add(caseItem(i < 7 ? 10 + i : 19 + i - 7, newest.get(i)));
+            }
+            items.add(new MenuItem(27, Icon.INFO, "&fNewest " + newest.size() + " cases",
+                    List.of("&7Older ones and every detail:", "&f/blackdoor cases"), null));
+            items.add(new MenuItem(31, Icon.BACK, "&7Back", List.of(), s -> s.show(punishments())));
+            return new Menu("Black Door - Cases", 4, items);
+        };
+    }
+
+    private MenuItem caseItem(int slot, io.github.intruder_tech.blackdoor.enforcement.CaseBook.Case found) {
+        String what = switch (found.action()) {
+            case WOULD_KICK -> "&eWould be kicked";
+            case KICK -> "&6Kicked";
+            case BAN -> "&cBanned";
+        };
+        Icon icon = found.falseAlarm() ? Icon.CASE_FALSE : switch (found.action()) {
+            case WOULD_KICK -> Icon.CASE_WATCH;
+            case KICK -> Icon.CASE_KICK;
+            case BAN -> Icon.CASE_BAN;
+        };
+        List<String> lore = new ArrayList<>();
+        lore.add(what + " &7" + io.github.intruder_tech.blackdoor.enforcement.BanBook
+                .words(engine.time().currentTimeMillis() - found.timeMillis()) + " ago");
+        lore.add("");
+        found.evidence().stream().limit(4).forEach(e -> lore.add("&8- &7" + friendlyName(e.checkId())));
+        if (found.evidence().size() > 4) {
+            lore.add("&8... " + (found.evidence().size() - 4) + " more: /blackdoor cases " + found.id());
+        }
+        lore.add("");
+        lore.add(found.falseAlarm() ? "&eClick to mark as real"
+                : "&eClick if this was a false alarm");
+        if (!found.falseAlarm() && found.action()
+                != io.github.intruder_tech.blackdoor.enforcement.CaseBook.Action.WOULD_KICK) {
+            lore.add("&7That also lifts any ban on this player.");
+        }
+        return new MenuItem(slot, icon, "&f#" + found.id() + " " + Text.escape(found.name())
+                + (found.falseAlarm() ? " &a| False alarm" : ""), lore, s -> {
+                    if (mayEdit(s)) {
+                        engine.judgeCase(found.id(), !found.falseAlarm(), s.viewer().name());
+                        s.refresh();
+                    }
+                });
     }
 
     private void unban(MenuSession session, String name) {

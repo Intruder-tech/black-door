@@ -110,6 +110,21 @@ class MenuTest {
     }
 
     @Test
+    void reviewPageShowsACaseAndClickingMarksItAsAFalseAlarm() {
+        var cases = engine.cases().orElseThrow();
+        cases.open(java.util.UUID.randomUUID(), "Griefer",
+                io.github.intruder_tech.blackdoor.enforcement.CaseBook.Action.KICK, java.util.List.of());
+        FakeSession s = new FakeSession(RecordingSender.admin(), engine.menus().punishments());
+        assertThat(s.shown.itemAt(13).orElseThrow().name()).contains("Review cases");
+        s.click(13);
+        assertThat(s.shown.title()).isEqualTo("Black Door - Cases");
+        assertThat(s.shown.itemAt(10).orElseThrow().name()).contains("#1").contains("Griefer");
+        s.click(10);
+        assertThat(cases.find(1).orElseThrow().falseAlarm()).isTrue();
+        assertThat(s.shown.itemAt(10).orElseThrow().name()).contains("False alarm");
+    }
+
+    @Test
     void clickingABannedPlayerLiftsTheBan() {
         var rules = new io.github.intruder_tech.blackdoor.enforcement.EnforcementSettings(
                 io.github.intruder_tech.blackdoor.enforcement.EnforcementSettings.Mode.KICK, 5, 60, 1, 60, 24);
