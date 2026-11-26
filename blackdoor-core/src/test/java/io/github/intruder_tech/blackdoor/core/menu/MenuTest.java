@@ -82,7 +82,7 @@ class MenuTest {
         FakeSession s = new FakeSession(RecordingSender.admin(), engine.menus().main());
         assertThat(s.shown.title()).isEqualTo("Black Door");
         assertThat(s.shown.itemAt(10).orElseThrow().name()).contains("Protection").contains("OFF");
-        assertThat(s.shown.items()).filteredOn(i -> i.icon() == Icon.LOCKED)
+        assertThat(s.shown.items()).filteredOn(i -> i.name().contains("coming soon"))
                 .allSatisfy(i -> assertThat(i.action()).isNull())
                 .anySatisfy(i -> assertThat(i.name()).contains("X-Ray"));
         assertThat(s.shown.itemAt(4)).as("setup reminder").isPresent();
@@ -103,16 +103,26 @@ class MenuTest {
             Thread.sleep(10);
         }
         assertThat(s.refreshes.get()).isPositive();
-        assertThat(s.shown.itemAt(10).orElseThrow().icon()).isEqualTo(Icon.CHECK_MITIGATE);
+        assertThat(s.shown.itemAt(10).orElseThrow().glow()).as("blocking checks glow").isTrue();
     }
 
     @Test
     void checkIconsAreCentredAndStayOffTheEdges() {
         FakeSession s = new FakeSession(RecordingSender.admin(), engine.menus().packetChecks());
         assertThat(s.shown.items())
-                .filteredOn(i -> i.icon() == Icon.CHECK_MONITOR)
+                .filteredOn(i -> i.slot() < 27)
                 .extracting(MenuItem::slot)
                 .containsExactly(10, 11, 12, 13, 14, 15, 16, 20, 21, 22, 23, 24);
+    }
+
+    @Test
+    void everyCheckHasItsOwnItem() {
+        FakeSession s = new FakeSession(RecordingSender.admin(), engine.menus().packetChecks());
+        assertThat(s.shown.items())
+                .filteredOn(i -> i.slot() < 27)
+                .extracting(MenuItem::icon)
+                .doesNotHaveDuplicates()
+                .doesNotContain(Icon.CHECK_DISABLED);
     }
 
     @Test

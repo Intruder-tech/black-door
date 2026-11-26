@@ -65,6 +65,23 @@ public final class BlackDoorMenus {
         return checkId;
     }
 
+    private static Icon iconFor(PacketCheck check) {
+        return switch (check) {
+            case INVALID_POSITION -> Icon.POSITION;
+            case INVALID_ROTATION -> Icon.ROTATION;
+            case INVALID_SLOT -> Icon.SLOT;
+            case SELF_INTERACT -> Icon.SELF_INTERACT;
+            case TELEPORT_CONFIRM -> Icon.TELEPORT;
+            case OVERSIZED -> Icon.OVERSIZED;
+            case TRANSACTION -> Icon.TRANSACTION;
+            case FLOOD -> Icon.FLOOD;
+            case PAYLOAD -> Icon.PAYLOAD;
+            case BOOK -> Icon.BOOK;
+            case SIGN -> Icon.SIGN;
+            case CREATIVE_ITEM -> Icon.CREATIVE_ITEM;
+        };
+    }
+
     private final BlackDoorEngine engine;
     private final SettingsService settings;
 
@@ -89,20 +106,18 @@ public final class BlackDoorMenus {
                     List.of("&7" + PacketCheck.values().length + " checks for actions only", "&7hacked clients can do.",
                             "", "&eClick to open"),
                     s -> s.show(packetChecks())));
-            items.add(locked(14, "Movement & combat checks", "Fly, speed, reach, kill aura...", "Phase 3"));
-            items.add(locked(16, "Anti X-Ray / ESP", "Hide ores and players from cheaters", "Phase 4"));
+            items.add(locked(14, Icon.LOCKED_COMBAT, "Movement & combat checks", "Fly, speed, reach, kill aura...", "Phase 3"));
+            items.add(locked(16, Icon.LOCKED_XRAY, "Anti X-Ray / ESP", "Hide ores and players from cheaters", "Phase 4"));
             Setting joins = settings.find(SettingsService.NETWORK_MODE).orElseThrow();
             String joinMode = settings.current(joins);
-            items.add(new MenuItem(20, switch (joinMode) {
-                case "disabled" -> Icon.CHECK_DISABLED;
-                case "mitigate" -> Icon.CHECK_MITIGATE;
-                default -> Icon.CHECK_MONITOR;
-            }, "&fJoin flood protection &8| " + modeLabel(joinMode),
+            items.add(new MenuItem(20, joinMode.equals("disabled") ? Icon.CHECK_DISABLED : Icon.JOIN_GUARD,
+                    "&fJoin flood protection &8| " + modeLabel(joinMode),
                     List.of("&7Limits how fast one address can", "&7join or ping your server.", "",
                             "&7Now: " + modeLabel(joinMode) + " &8- " + modeMeaning(joinMode),
                             "&8Cannot stop large DDoS attacks.", "", "&eClick to change: &8Off > &aWatch &8> &cBlock"),
-                    s -> cycle(s, joins, "Join flood protection is now " + plainMode(settings.next(joins)))));
-            items.add(new MenuItem(22, Icon.INFO, "&fStatus", statusLore(), null));
+                    s -> cycle(s, joins, "Join flood protection is now " + plainMode(settings.next(joins))),
+                    joinMode.equals("mitigate")));
+            items.add(new MenuItem(22, Icon.STATUS, "&fStatus", statusLore(), null));
             items.add(new MenuItem(24, Icon.RELOAD, "&fReload settings",
                     List.of("&7Use this after editing the config", "&7files by hand.", "", "&eClick to reload"),
                     this::reload));
@@ -124,11 +139,7 @@ public final class BlackDoorMenus {
             for (PacketCheck check : PacketCheck.values()) {
                 Setting setting = settings.find(check.id()).orElseThrow();
                 String current = settings.current(setting);
-                Icon icon = switch (current) {
-                    case "disabled" -> Icon.CHECK_DISABLED;
-                    case "mitigate" -> Icon.CHECK_MITIGATE;
-                    default -> Icon.CHECK_MONITOR;
-                };
+                Icon icon = current.equals("disabled") ? Icon.CHECK_DISABLED : iconFor(check);
                 Friendly f = FRIENDLY.get(check);
                 List<String> lore = new ArrayList<>();
                 lore.add("&7" + f.line1());
@@ -144,7 +155,8 @@ public final class BlackDoorMenus {
                 lore.add("&8" + check.id());
                 int slot = centredSlot(index++, PacketCheck.values().length);
                 items.add(new MenuItem(slot, icon, "&f" + f.name() + " &8| " + modeLabel(current), lore,
-                        s -> cycle(s, setting, f.name() + " is now " + plainMode(settings.next(setting)))));
+                        s -> cycle(s, setting, f.name() + " is now " + plainMode(settings.next(setting))),
+                        current.equals("mitigate")));
             }
             items.add(new MenuItem(27, Icon.INFO, "&fWhat do the modes mean?",
                     List.of("&8Off&7: the check does nothing.", "&aWatch&7: logs it, never interferes.",
@@ -224,8 +236,8 @@ public final class BlackDoorMenus {
         return lore;
     }
 
-    private static MenuItem locked(int slot, String name, String what, String phase) {
-        return new MenuItem(slot, Icon.LOCKED, "&8" + name + " &7(coming soon)",
+    private static MenuItem locked(int slot, Icon icon, String name, String what, String phase) {
+        return new MenuItem(slot, icon, "&8" + name + " &7(coming soon)",
                 List.of("&7" + what, "", "&8Not available yet - planned for " + phase + "."), null);
     }
 

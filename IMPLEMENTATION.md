@@ -320,14 +320,22 @@ validation; private addresses exempt; per-address limits off behind BungeeCord f
 - **Not verified:** exploit guards against a modded or hacked client, proxies, Folia and legacy
   servers with the new code.
 
-**Remaining in Phase 4:** limits on Velocity/BungeeCord, forwarding validation, item data
+**4.3 Proxy connection limits** (`ProxyGate` in core; Velocity ping and pre-login events,
+BungeeCord connect and pre-login events). Live probe on copies of both proxies, built-in proxy
+throttles off, localhost counted: monitor answered 60 of 60 pings and 20 of 20 logins; mitigate +
+enforce answered 29 of 60 pings on both, 1 of 20 logins on Velocity and 0 on BungeeCord.
+
+**Check page icons:** each check now has its own item, Off is gray dye, Block adds a glint (older
+servers use stand-in items). Not yet confirmed in game.
+
+**Remaining in Phase 4:** forwarding validation, item data
 structure limits, creative game-mode check, bot scoring, quarantine, adaptive mode, anti-xray,
 edge agent. See docs/KNOWN_LIMITATIONS.md.
 
 ## 11. Next Steps
 
-0. Play-test 4.1 with a modded client in monitor mode. Next Phase 4 candidates: connection
-   limits on Velocity/BungeeCord, forwarding validation.
+0. Owner to review the new icons and 4.3, then commit. Play-test 4.1 with a modded client in
+   monitor mode. Next Phase 4 candidate: forwarding validation.
 1. Milestone 2.4a: implement the world view decided in ADR-017 (shared position-keyed collision
    cache, overlay, simulation radius, memory budget), fed by chunk and block-change packets, plus
    a collision-shape registry generated from game data.

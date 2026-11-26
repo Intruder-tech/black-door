@@ -76,6 +76,7 @@ public final class BlackDoorEngine {
     private volatile io.github.intruder_tech.blackdoor.protocol.packet.PacketHandler packetHandler;
     private volatile io.github.intruder_tech.blackdoor.network.ConnectionGuard connectionGuard;
     private volatile java.util.concurrent.ScheduledExecutorService heartbeat;
+    private volatile ProxyGate proxyGate;
 
     /** How often Black Door pings each player for latency and acknowledgement tracking. */
     static final long TRANSACTION_INTERVAL_MS = 50;
@@ -181,7 +182,13 @@ public final class BlackDoorEngine {
     /** Backend only: wires sessions, ledger and the packet engine to the packet library. */
     private void startPacketLayer() {
         ledger = new ViolationLedger(new RateLimitedLogger(logger, time, 3, 1, 256), 10_000, 200);
-        if (platform.info().type().isProxy() || !platform.protocol().isAvailable()) {
+        if (platform.info().type().isProxy()) {
+            // Players connect to a proxy directly, so their addresses are real here.
+            connectionGuard = newConnectionGuard(false);
+            proxyGate = new ProxyGate(connectionGuard, new RateLimitedLogger(logger, time, 3, 0.1, 16));
+            return;
+        }
+        if (!platform.protocol().isAvailable()) {
             return;
         }
         sessions = new SessionRegistry(config.current().get(CoreConfig.CHECKS).maxSessions(), time);
@@ -198,9 +205,7 @@ public final class BlackDoorEngine {
         }
         packetEngine.traceListener(traceRecorder);
         boolean forwarded = Boolean.TRUE.equals(platform.securityFacts().bungeeCordForwarding());
-        io.github.intruder_tech.blackdoor.network.ConnectionGuard guard =
-                new io.github.intruder_tech.blackdoor.network.ConnectionGuard(ledger, time, this::networkSettings,
-                        () -> settings().mode() == GeneralSettings.Mode.ENFORCE, () -> forwarded);
+        io.github.intruder_tech.blackdoor.network.ConnectionGuard guard = newConnectionGuard(forwarded);
         connectionGuard = guard;
         packetHandler = new GuardedPacketHandler(packetEngine, guard,
                 new RateLimitedLogger(logger, time, 3, 0.1, 16));
@@ -223,6 +228,16 @@ public final class BlackDoorEngine {
                 logger.error("Transaction heartbeat failed", e);
             }
         }, TRANSACTION_INTERVAL_MS, TRANSACTION_INTERVAL_MS, java.util.concurrent.TimeUnit.MILLISECONDS);
+    }
+
+    private io.github.intruder_tech.blackdoor.network.ConnectionGuard newConnectionGuard(boolean forwarded) {
+        return new io.github.intruder_tech.blackdoor.network.ConnectionGuard(ledger, time, this::networkSettings,
+                () -> settings().mode() == GeneralSettings.Mode.ENFORCE, () -> forwarded);
+    }
+
+    /** Join and ping limits for the proxy adapters; empty on backends. */
+    public Optional<ProxyGate> proxyGate() {
+        return Optional.ofNullable(proxyGate);
     }
 
     /**

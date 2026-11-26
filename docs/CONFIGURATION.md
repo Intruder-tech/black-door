@@ -93,6 +93,8 @@ connections) and `packet.max-sessions` (restart required).
 (`burst`, `per-second`); `max-hostname-length`; `max-tracked-addresses`;
 `exempt-private-addresses`; `exempt-addresses`. Limit changes apply to addresses not yet tracked.
 Quarantine, adaptive mode and forwarding expectations are not implemented yet.
+The same file applies on Velocity and BungeeCord; see KNOWN_LIMITATIONS.md for what each proxy
+can refuse.
 
 ## 3. Profiles (intent)
 

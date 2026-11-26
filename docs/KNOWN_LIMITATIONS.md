@@ -31,8 +31,14 @@
 
 ### Current implementation gaps (connection protection and exploit guards)
 
-- Connection limits run on backend servers only; the Velocity and BungeeCord plugins do not
-  apply them yet.
+- BungeeCord cannot refuse a status ping event, so pings there are limited only by the
+  connection limit (the `pings` limit has no effect).
+- Velocity cannot refuse at handshake: its connection and hostname limits apply when the ping or
+  login arrives. BungeeCord does not check hostname length.
+- Proxies have no in-game panel: change `network.yml` and `config.yml`, then
+  `/blackdoorproxy reload`.
+- A proxy behind another proxy or TCP shield without PROXY protocol sees one shared address; list
+  it in `exempt-addresses`.
 - Velocity modern forwarding cannot be detected from the backend. A proxy reaching the backend
   over a public address must be listed in `exempt-addresses`.
 - Book edits on pre-1.13 clients arrive as plugin messages and are only size-checked.
