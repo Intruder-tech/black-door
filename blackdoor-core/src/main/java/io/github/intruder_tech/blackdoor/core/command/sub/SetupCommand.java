@@ -102,23 +102,10 @@ public final class SetupCommand implements Subcommand {
                         : warn("Minecraft " + v + " is " + status.name().toLowerCase(Locale.ROOT).replace('_', ' ')));
             });
             SecurityFacts facts = engine.platform().securityFacts();
-            if (Boolean.TRUE.equals(facts.onlineMode())) {
-                lines.add(ok("Online mode is on (Mojang authentication)"));
-            } else if (Boolean.FALSE.equals(facts.onlineMode())) {
-                if (Boolean.TRUE.equals(facts.bungeeCordForwarding())) {
-                    lines.add(warn("Behind BungeeCord: firewall this server so ONLY the proxy can connect, or anyone can spoof names/UUIDs."));
-                } else {
-                    lines.add(fail("Offline mode: unless this server is behind a Velocity proxy with modern forwarding,"
-                            + " anyone can join as any player."));
-                }
-                if (Boolean.TRUE.equals(facts.boundToAllInterfaces())) {
-                    lines.add(warn("server-ip is empty (listens on every interface); bind it to your private network."));
-                }
-            } else {
-                lines.add(warn("Could not read online-mode on this platform; check it manually."));
-            }
+            forwarding(facts, lines);
         } else {
-            lines.add(warn("Proxy: forwarding validation and connection limits arrive in Phase 4."));
+            lines.add(ok("Proxy: join limits follow network.yml (mode " + engine.networkSettings().mode()
+                    .name().toLowerCase(Locale.ROOT) + ")"));
         }
         lines.add(engine.configSnapshot().defaultsOnly()
                 ? fail("Configuration files are invalid; bundled defaults are active. Fix them and reload.")
@@ -129,6 +116,43 @@ public final class SetupCommand implements Subcommand {
                 : warn("Global mode: enforce (checks in 'mitigate' mode block packets)"));
         lines.add(s.auditEnabled() ? ok("Audit log enabled") : warn("Audit log disabled: admin actions are not recorded"));
         return lines;
+    }
+
+    /** Online mode, proxy forwarding and whether the proxy can be bypassed. */
+    private void forwarding(SecurityFacts facts, List<String> lines) {
+        boolean velocity = Boolean.TRUE.equals(facts.velocityForwarding());
+        if (Boolean.TRUE.equals(facts.onlineMode())) {
+            lines.add(ok("Online mode is on (Mojang authentication)"));
+        } else if (facts.onlineMode() == null) {
+            lines.add(warn("Could not read online-mode on this platform; check it manually."));
+        } else if (Boolean.TRUE.equals(facts.bungeeCordForwarding())) {
+            lines.add(warn("Behind BungeeCord: firewall this server so ONLY the proxy can connect, or anyone can spoof names/UUIDs."));
+        } else if (!velocity) {
+            lines.add(fail("Offline mode without proxy forwarding: anyone can join as any player."));
+        }
+        if (velocity) {
+            lines.add(Boolean.TRUE.equals(facts.weakVelocitySecret())
+                    ? fail("Velocity forwarding secret is empty or too short: set a long random one on both sides.")
+                    : ok("Velocity modern forwarding is on"));
+        }
+        if (facts.behindProxy()) {
+            int proxies = engine.networkSettings().allowedProxies().size();
+            lines.add(proxies == 0
+                    ? warn("Set allowed-proxies in network.yml to your proxy's address so nobody can bypass it.")
+                    : ok("Proxy list set (" + proxies + "); " + directJoinHandling()));
+        }
+        if (Boolean.FALSE.equals(facts.onlineMode()) && Boolean.TRUE.equals(facts.boundToAllInterfaces())) {
+            lines.add(warn("server-ip is empty (listens on every interface); bind it to your private network."));
+        }
+    }
+
+    private String directJoinHandling() {
+        return switch (engine.networkSettings().mode()) {
+            case DISABLED -> "but join protection is Off, so others are not stopped";
+            case MONITOR -> "others are only logged (join protection is on Watch)";
+            case MITIGATE -> engine.settings().mode() == GeneralSettings.Mode.ENFORCE
+                    ? "others are blocked" : "others will be blocked once Protection is ON";
+        };
     }
 
     @Override

@@ -74,6 +74,11 @@ public final class ConnectionGuard {
             return false;
         }
         boolean refuse = rate(cfg, address, Kind.CONNECTION, cfg.connections());
+        // At handshake the address is still the real TCP peer, even behind a forwarding proxy.
+        if (!cfg.allowedProxies().isEmpty() && !cfg.allowedProxies().contains(address.getHostAddress())) {
+            refuse |= report(cfg, "network.direct-join", new Subject(null, address.getHostAddress()),
+                    Confidence.DETERMINISTIC, "connected without going through an allowed proxy");
+        }
         if (!forwarded.getAsBoolean() && hostnameLength > cfg.maxHostnameLength()) {
             refuse |= report(cfg, "network.hostname", new Subject(null, address.getHostAddress()),
                     Confidence.HEURISTIC, "hostname of " + hostnameLength + " characters");

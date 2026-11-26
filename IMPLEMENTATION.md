@@ -333,7 +333,14 @@ servers use stand-in items). Not yet confirmed in game.
 the server starts with it. **Not verified with a real player:** the join lock, the messages and
 that passwords stay out of the server log.
 
-**Remaining in Phase 4:** forwarding validation, item data
+**4.4 Forwarding validation:** `allowed-proxies` blocks connections that bypass the proxy;
+`/blackdoor setup` checks Velocity and BungeeCord forwarding and short secrets; per-address limits
+switch off behind Velocity modern forwarding too. 215 unit tests. Live on a Paper 26.3 copy: a
+direct connection was refused, a listed address got 60 of 60 pings, a short secret was reported.
+**Not verified:** with a real proxy in front; BungeeGuard tokens are not implemented.
+The owner confirmed the login system works in game; the server log held no password lines.
+
+**Remaining in Phase 4:** item data
 structure limits, creative game-mode check, bot scoring, quarantine, adaptive mode, anti-xray,
 edge agent. See docs/KNOWN_LIMITATIONS.md.
 

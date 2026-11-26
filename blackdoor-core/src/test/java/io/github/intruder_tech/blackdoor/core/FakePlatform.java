@@ -21,6 +21,13 @@ public final class FakePlatform implements Platform {
 
     public final List<String> log = new CopyOnWriteArrayList<>();
     public final AtomicInteger cancelAllCalls = new AtomicInteger();
+    public io.github.intruder_tech.blackdoor.core.platform.SecurityFacts facts =
+            io.github.intruder_tech.blackdoor.core.platform.SecurityFacts.UNKNOWN;
+
+    @Override
+    public io.github.intruder_tech.blackdoor.core.platform.SecurityFacts securityFacts() {
+        return facts;
+    }
     private final Path dataDirectory;
     private final PlatformInfo info;
     private final ProtocolBridge protocol;

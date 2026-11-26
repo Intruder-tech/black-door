@@ -6,11 +6,15 @@ import io.github.intruder_tech.blackdoor.protocol.MinecraftVersion;
 import io.github.intruder_tech.blackdoor.protocol.ProtocolBridge;
 import org.bukkit.Bukkit;
 import org.bukkit.Server;
+import org.bukkit.configuration.file.YamlConfiguration;
 
+import java.io.File;
 import java.util.Optional;
 
 /** Detects which Bukkit-family server is running. Uses class presence only; never initializes server classes. */
 final class BukkitEnvironment {
+
+    private static final int MIN_SECRET_LENGTH = 12;
 
     private BukkitEnvironment() {
     }
@@ -61,7 +65,30 @@ final class BukkitEnvironment {
         } catch (RuntimeException | LinkageError e) {
             // spigot.yml API not available on this platform
         }
-        return new io.github.intruder_tech.blackdoor.core.platform.SecurityFacts(online, bungee, allInterfaces);
+        Boolean velocity = null;
+        Boolean weakSecret = null;
+        try {
+            // Paper 1.19+ and, before that, paper.yml; paths are relative to the server folder.
+            String[][] sources = {{"config/paper-global.yml", "proxies.velocity"}, {"paper.yml", "settings.velocity-support"}};
+            for (String[] source : sources) {
+                File file = new File(source[0]);
+                if (!file.isFile()) {
+                    continue;
+                }
+                YamlConfiguration yaml = YamlConfiguration.loadConfiguration(file);
+                velocity = yaml.getBoolean(source[1] + ".enabled", false);
+                String secret = System.getenv("PAPER_VELOCITY_SECRET");
+                if (secret == null || secret.isEmpty()) {
+                    secret = yaml.getString(source[1] + ".secret", "");
+                }
+                weakSecret = velocity && (secret == null || secret.length() < MIN_SECRET_LENGTH);
+                break;
+            }
+        } catch (RuntimeException | LinkageError e) {
+            // unreadable configuration: leave unknown
+        }
+        return new io.github.intruder_tech.blackdoor.core.platform.SecurityFacts(online, bungee, allInterfaces,
+                velocity, weakSecret);
     }
 
     /** Paper 1.20+ and Folia expose region/entity schedulers on {@link Bukkit}. */

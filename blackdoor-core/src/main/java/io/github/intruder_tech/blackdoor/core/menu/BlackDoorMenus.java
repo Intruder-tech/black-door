@@ -123,6 +123,8 @@ public final class BlackDoorMenus {
                     "&fJoin flood protection &8| " + modeLabel(joinMode),
                     List.of("&7Limits how fast one address can", "&7join or ping your server.", "",
                             "&7Now: " + modeLabel(joinMode) + " &8- " + modeMeaning(joinMode),
+                            "&7Proxy lock: " + (engine.networkSettings().allowedProxies().isEmpty()
+                                    ? "&8not set" : "&aonly your proxy may connect") + " &8(network.yml)",
                             "&8Cannot stop large DDoS attacks.", "", "&eClick to change: &8Off > &aWatch &8> &cBlock"),
                     s -> cycle(s, joins, "Join flood protection is now " + plainMode(settings.next(joins))),
                     joinMode.equals("mitigate")));

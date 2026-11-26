@@ -31,6 +31,8 @@
 
 ### Current implementation gaps (connection protection and exploit guards)
 
+- `allowed-proxies` compares exact addresses (no ranges) and needs PacketEvents; a firewall is
+  still the stronger protection. BungeeGuard-style tokens are not checked.
 - BungeeCord cannot refuse a status ping event, so pings there are limited only by the
   connection limit (the `pings` limit has no effect).
 - Velocity cannot refuse at handshake: its connection and hostname limits apply when the ping or

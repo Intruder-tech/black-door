@@ -211,7 +211,7 @@ public final class BlackDoorEngine {
                     settings().worldMemoryMb() * 1024L * 1024L), shapes);
         }
         packetEngine.traceListener(traceRecorder);
-        boolean forwarded = Boolean.TRUE.equals(platform.securityFacts().bungeeCordForwarding());
+        boolean forwarded = platform.securityFacts().behindProxy();
         io.github.intruder_tech.blackdoor.network.ConnectionGuard guard = newConnectionGuard(forwarded);
         connectionGuard = guard;
         packetHandler = new GuardedPacketHandler(packetEngine, guard,

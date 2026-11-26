@@ -9,7 +9,8 @@ import java.util.stream.Collectors;
 
 /** Parsed {@code network.yml}. Immutable. */
 public record NetworkSettings(Mode mode, Limit connections, Limit pings, Limit logins, int maxHostnameLength,
-                              int maxTrackedAddresses, Set<String> exemptAddresses, boolean exemptPrivate) {
+                              int maxTrackedAddresses, Set<String> exemptAddresses, boolean exemptPrivate,
+                              Set<String> allowedProxies) {
 
     /** Same meaning as the packet check modes. */
     public enum Mode { DISABLED, MONITOR, MITIGATE }
@@ -22,6 +23,14 @@ public record NetworkSettings(Mode mode, Limit connections, Limit pings, Limit l
 
     public NetworkSettings {
         exemptAddresses = Set.copyOf(exemptAddresses);
+        allowedProxies = Set.copyOf(allowedProxies);
+    }
+
+    /** Without a proxy allowlist. */
+    public NetworkSettings(Mode mode, Limit connections, Limit pings, Limit logins, int maxHostnameLength,
+                           int maxTrackedAddresses, Set<String> exemptAddresses, boolean exemptPrivate) {
+        this(mode, connections, pings, logins, maxHostnameLength, maxTrackedAddresses, exemptAddresses, exemptPrivate,
+                Set.of());
     }
 
     public static NetworkSettings defaults() {
@@ -33,6 +42,7 @@ public record NetworkSettings(Mode mode, Limit connections, Limit pings, Limit l
     public static NetworkSettings parse(ConfigReader r) {
         NetworkSettings d = defaults();
         String exempt = r.getString("exempt-addresses", "", 4096, ADDRESS_LIST);
+        String proxies = r.getString("allowed-proxies", "", 4096, ADDRESS_LIST);
         return new NetworkSettings(
                 r.getEnum("mode", Mode.class, d.mode()),
                 limit(r, "connections", d.connections()),
@@ -40,8 +50,13 @@ public record NetworkSettings(Mode mode, Limit connections, Limit pings, Limit l
                 limit(r, "logins", d.logins()),
                 r.getInt("max-hostname-length", d.maxHostnameLength(), 64, 32767),
                 r.getInt("max-tracked-addresses", d.maxTrackedAddresses(), 100, 1_000_000),
-                Arrays.stream(exempt.split(",")).map(String::trim).filter(s -> !s.isEmpty()).collect(Collectors.toSet()),
-                r.getBoolean("exempt-private-addresses", d.exemptPrivate()));
+                addresses(exempt),
+                r.getBoolean("exempt-private-addresses", d.exemptPrivate()),
+                addresses(proxies));
+    }
+
+    private static Set<String> addresses(String list) {
+        return Arrays.stream(list.split(",")).map(String::trim).filter(s -> !s.isEmpty()).collect(Collectors.toSet());
     }
 
     private static Limit limit(ConfigReader r, String path, Limit d) {

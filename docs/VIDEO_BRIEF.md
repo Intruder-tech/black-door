@@ -258,6 +258,10 @@ checks; a normal game client simply does not send the data they look for.
   that suggests using the in-game panel.
 - BungeeCord cannot refuse a server-list ping by itself; only the connection limit applies there.
 
+- On a backend behind a proxy, set `allowed-proxies` in `network.yml` to the proxy's address so
+  nobody can skip the proxy. It blocks only with join protection on Block and Protection ON, and
+  a firewall is still recommended.
+
 ## Command reference
 
 | Command | Use |

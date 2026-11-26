@@ -37,5 +37,11 @@ exempt-private-addresses: true
 # written in full form.
 exempt-addresses: ""
 
+# Backend servers behind a proxy: list the proxy's address (or addresses), comma separated, and
+# connections from anywhere else are treated as someone bypassing the proxy. Empty = no
+# restriction. Include 127.0.0.1 if the proxy runs on this machine. Follows "mode" above.
+# IPv6 addresses must be written in full form.
+allowed-proxies: ""
+
 # Per-address limits are switched off automatically when BungeeCord forwarding is enabled
 # in spigot.yml, because every player then arrives from the proxy's address.

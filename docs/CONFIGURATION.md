@@ -96,6 +96,12 @@ Quarantine, adaptive mode and forwarding expectations are not implemented yet.
 The same file applies on Velocity and BungeeCord; see KNOWN_LIMITATIONS.md for what each proxy
 can refuse.
 
+**`network.yml` `allowed-proxies`** (empty): on a backend behind a proxy, connections from any
+other address are logged as `network.direct-join` and, in `mitigate` with global `enforce`,
+closed. It complements a firewall and does not replace it. Leave it empty on proxies and on
+servers players join directly. `/blackdoor setup` also checks Velocity and BungeeCord forwarding
+and flags a short Velocity secret. The proxy flags are read at startup.
+
 ## 2d. Login system
 
 **`auth.yml`:** `enabled` (false), `session-hours` (24), `login-timeout-seconds` (60),
