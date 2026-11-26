@@ -62,6 +62,23 @@ public sealed interface ServerboundPacket {
         }
     }
 
+    /** Movement keys held (1.21.2+). */
+    record Input(boolean forward, boolean backward, boolean left, boolean right, boolean jump, boolean sneak,
+                 boolean sprint) implements ServerboundPacket {
+    }
+
+    /** Sprint, sneak, elytra and similar state changes; {@code action} is the protocol's action name. */
+    record PlayerAction(String action) implements ServerboundPacket {
+    }
+
+    /** The client started or stopped flying. */
+    record Flying(boolean flying) implements ServerboundPacket {
+    }
+
+    /** End of one client tick (1.21.2+). */
+    record TickEnd() implements ServerboundPacket {
+    }
+
     /** An answer the server is waiting for (keep-alive and the like). Flood mitigation never drops it. */
     record Reply(String typeName) implements ServerboundPacket {
     }

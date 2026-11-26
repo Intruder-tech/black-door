@@ -154,9 +154,10 @@ final class BlackDoorPacketListener implements PacketListener {
             } else if (event.getPacketType() == PacketType.Play.Server.PLAYER_POSITION_AND_LOOK) {
                 ConnectionInfo info = info(event.getUser(), event.getChannel());
                 if (info != null) {
-                    handler.onOutbound(info, new ClientboundPacket.SyncPosition(
-                            new WrapperPlayServerPlayerPositionAndLook(event).getTeleportId()));
+                    handler.onOutbound(info, syncPosition(new WrapperPlayServerPlayerPositionAndLook(event)));
                 }
+            } else if (handler.wantsMovementDetail() && detail(event)) {
+                return;
             } else {
                 ClientboundPacket tracked = OutboundTranslator.translate(event);
                 if (tracked != null) {
@@ -169,6 +170,62 @@ final class BlackDoorPacketListener implements PacketListener {
         } catch (RuntimeException e) {
             translationErrors.increment();
         }
+    }
+
+    private static ClientboundPacket syncPosition(WrapperPlayServerPlayerPositionAndLook w) {
+        var flags = new com.github.retrooper.packetevents.protocol.teleport.RelativeFlag[]{
+                com.github.retrooper.packetevents.protocol.teleport.RelativeFlag.X,
+                com.github.retrooper.packetevents.protocol.teleport.RelativeFlag.Y,
+                com.github.retrooper.packetevents.protocol.teleport.RelativeFlag.Z,
+                com.github.retrooper.packetevents.protocol.teleport.RelativeFlag.YAW,
+                com.github.retrooper.packetevents.protocol.teleport.RelativeFlag.PITCH,
+                com.github.retrooper.packetevents.protocol.teleport.RelativeFlag.DELTA_X,
+                com.github.retrooper.packetevents.protocol.teleport.RelativeFlag.DELTA_Y,
+                com.github.retrooper.packetevents.protocol.teleport.RelativeFlag.DELTA_Z,
+                com.github.retrooper.packetevents.protocol.teleport.RelativeFlag.ROTATE_DELTA};
+        int relative = 0;
+        for (int i = 0; i < flags.length; i++) {
+            if (w.isRelativeFlag(flags[i])) {
+                relative |= 1 << i;
+            }
+        }
+        return new ClientboundPacket.SyncPosition(w.getTeleportId(), w.getX(), w.getY(), w.getZ(), w.getYaw(),
+                w.getPitch(), relative);
+    }
+
+    /** Effects, attributes and abilities, which only trace recording needs. */
+    private boolean detail(PacketSendEvent event) {
+        var type = event.getPacketType();
+        if (type != PacketType.Play.Server.ENTITY_EFFECT && type != PacketType.Play.Server.REMOVE_ENTITY_EFFECT
+                && type != PacketType.Play.Server.UPDATE_ATTRIBUTES && type != PacketType.Play.Server.PLAYER_ABILITIES) {
+            return false;
+        }
+        ConnectionInfo info = info(event.getUser(), event.getChannel());
+        if (info == null) {
+            return true;
+        }
+        if (type == PacketType.Play.Server.ENTITY_EFFECT) {
+            var w = new com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerEntityEffect(event);
+            handler.onOutbound(info, new ClientboundPacket.Effect(w.getEntityId(),
+                    String.valueOf(w.getPotionType().getName()), w.getEffectAmplifier(), w.getEffectDurationTicks()));
+        } else if (type == PacketType.Play.Server.REMOVE_ENTITY_EFFECT) {
+            var w = new com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerRemoveEntityEffect(event);
+            handler.onOutbound(info, new ClientboundPacket.EffectRemoved(w.getEntityId(),
+                    String.valueOf(w.getPotionType().getName())));
+        } else if (type == PacketType.Play.Server.UPDATE_ATTRIBUTES) {
+            var w = new com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerUpdateAttributes(event);
+            for (var property : w.getProperties()) {
+                var modifiers = property.getModifiers().stream()
+                        .map(m -> new ClientboundPacket.Attribute.Modifier(m.getAmount(), m.getOperation().ordinal()))
+                        .toList();
+                handler.onOutbound(info, new ClientboundPacket.Attribute(w.getEntityId(),
+                        String.valueOf(property.getAttribute().getName()), property.getValue(), modifiers));
+            }
+        } else {
+            var w = new com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerPlayerAbilities(event);
+            handler.onOutbound(info, new ClientboundPacket.Abilities(w.isFlying(), w.isFlightAllowed(), w.getFlySpeed()));
+        }
+        return true;
     }
 
     private void gameMode(ConnectionInfo info, GameMode mode) {

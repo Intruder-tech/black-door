@@ -58,6 +58,23 @@ final class PacketTranslator {
             return new ServerboundPacket.Movement(l.getX(), l.getY(), l.getZ(), l.getYaw(), l.getPitch(),
                     w.hasPositionChanged(), w.hasRotationChanged(), w.isOnGround());
         }
+        if (type == PacketType.Play.Client.PLAYER_INPUT) {
+            var w = new com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientPlayerInput(event);
+            return new ServerboundPacket.Input(w.isForward(), w.isBackward(), w.isLeft(), w.isRight(), w.isJump(),
+                    w.isShift(), w.isSprint());
+        }
+        if (type == PacketType.Play.Client.ENTITY_ACTION) {
+            var w = new com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientEntityAction(event);
+            return new ServerboundPacket.PlayerAction(String.valueOf(w.getAction()));
+        }
+        if (type == PacketType.Play.Client.PLAYER_ABILITIES) {
+            return new ServerboundPacket.Flying(
+                    new com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientPlayerAbilities(event)
+                            .isFlying());
+        }
+        if (type == PacketType.Play.Client.CLIENT_TICK_END) {
+            return new ServerboundPacket.TickEnd();
+        }
         if (type == PacketType.Play.Client.TELEPORT_CONFIRM) {
             return new ServerboundPacket.TeleportConfirm(new WrapperPlayClientTeleportConfirm(event).getTeleportId());
         }

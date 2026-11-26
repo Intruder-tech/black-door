@@ -39,6 +39,11 @@ final class GuardedPacketHandler implements PacketHandler {
     }
 
     @Override
+    public boolean wantsMovementDetail() {
+        return inGame.wantsMovementDetail();
+    }
+
+    @Override
     public void onDisconnect(Object connectionKey) {
         inGame.onDisconnect(connectionKey);
     }

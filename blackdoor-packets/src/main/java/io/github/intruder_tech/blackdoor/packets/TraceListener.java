@@ -15,4 +15,7 @@ public interface TraceListener {
     void outbound(PlayerSession session, ClientboundPacket packet, long nanoTime);
 
     void disconnected(PlayerSession session);
+
+    /** True while a recording is running or waiting for its player to join. */
+    boolean active();
 }

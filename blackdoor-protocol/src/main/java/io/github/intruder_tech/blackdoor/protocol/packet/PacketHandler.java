@@ -16,6 +16,11 @@ public interface PacketHandler {
 
     void onDisconnect(Object connectionKey);
 
+    /** True while effects, attributes and abilities should be translated too (trace recording). */
+    default boolean wantsMovementDetail() {
+        return false;
+    }
+
     /** @return {@link PacketVerdict#DROP} to refuse and close the connection */
     default PacketVerdict onPreLogin(java.net.InetAddress address, PreLogin packet) {
         return PacketVerdict.PASS;

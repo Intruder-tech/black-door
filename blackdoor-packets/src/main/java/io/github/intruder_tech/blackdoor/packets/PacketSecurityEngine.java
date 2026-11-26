@@ -404,6 +404,12 @@ public final class PacketSecurityEngine implements PacketHandler {
 
     private volatile TraceListener traceListener;
 
+    @Override
+    public boolean wantsMovementDetail() {
+        TraceListener trace = traceListener;
+        return trace != null && trace.active();
+    }
+
     /** Installs (or with null removes) the golden-trace recorder hook. */
     public void traceListener(TraceListener listener) {
         this.traceListener = listener;
