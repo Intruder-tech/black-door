@@ -26,6 +26,17 @@ z, then y) and `unload`; `teleport` with position, rotation and relative bits, a
 `tick`, `input`, `action`, `flying`; `abilities`, `gamemode`, `attribute`, `effect` and
 `effectRemoved`.
 
+Format 2 traces so far (26.3 / 26.3):
+
+| File | Content |
+|---|---|
+| `26.3/trace-101-sprint-fall-knockback.jsonl.gz` | 60 s, first 22 s creative; sprint-jumping, knockback, a fall of about 35 blocks |
+| `26.3/trace-102-sprint-jump-effects.jsonl.gz` | 120 s survival; sprinting and sprint-jumping, speed and jump boost |
+| `26.3/trace-104-sprint-sneak-wall.jsonl.gz` | 60 s, survival only from second 41; sprinting, a little sneaking, sliding along a wall |
+
+Still missing: plain walking, backward, strafing, sneaking, water, ladders, ice. Block shapes to
+replay them with are in `testdata/block-shapes/26.3.txt.gz`.
+
 Coverage gaps to fill later: falls from greater heights, elytra, riptide, vehicles, effects (speed,
 jump boost, slow falling), soul sand / honey / slime / cobweb / powder snow, and older clients
 (1.8.8, 1.21.x) via ViaVersion or native servers.

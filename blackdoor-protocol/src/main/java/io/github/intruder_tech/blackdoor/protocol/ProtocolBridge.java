@@ -65,6 +65,11 @@ public interface ProtocolBridge {
         return false;
     }
 
+    /** Name and properties of a global block-state id; empty when there is no such state. */
+    default Optional<String> blockState(int id) {
+        return Optional.empty();
+    }
+
     /** Packets that could not be decoded and passed through uninspected. */
     default long translationErrors() {
         return 0;

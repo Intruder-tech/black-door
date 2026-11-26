@@ -116,6 +116,16 @@ public final class PacketEventsBridge implements ProtocolBridge {
     }
 
     @Override
+    public Optional<String> blockState(int id) {
+        try {
+            var state = com.github.retrooper.packetevents.protocol.world.states.WrappedBlockState.getByGlobalId(id);
+            return state.getGlobalId() == id ? Optional.of(state.toString()) : Optional.empty();
+        } catch (RuntimeException | LinkageError e) {
+            return Optional.empty();
+        }
+    }
+
+    @Override
     public boolean usesLegacyTransactions() {
         PacketEventsAPI<?> api = api();
         try {

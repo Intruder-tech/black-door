@@ -20,6 +20,12 @@ record BukkitPlatform(PlatformInfo info, PlatformScheduler scheduler, BdLogger l
     }
 
     @Override
+    public java.util.function.Function<String, Optional<java.util.List<
+            io.github.intruder_tech.blackdoor.protocol.world.BlockShapes.Box>>> blockShapeSource() {
+        return BukkitBlockShapes.create();
+    }
+
+    @Override
     public SecurityFacts securityFacts() {
         return BukkitEnvironment.securityFacts();
     }

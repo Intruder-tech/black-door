@@ -78,6 +78,9 @@ public final class DiagnosticsCommand implements Subcommand {
                     + (g.warmingUp() ? " &6warming up" : "") + sep
                     + "&f" + attack.knownAddresses() + " &7known addresses" + sep + "&f" + attack.refused() + " &7refused"));
         });
+        sender.sendMessage(Text.row("Block shapes", engine.blockShapes()
+                .map(s -> (engine.blockShapesReady() ? "&aready " : "&ebuilding ") + "&f" + s.known())
+                .orElse("&7unavailable")));
         engine.workerStats().ifPresent(w -> sender.sendMessage(Text.row("Workers", describe(w, sep))));
         engine.audit().ifPresent(a -> sender.sendMessage(Text.row("Audit log", "&f" + a.written() + " &7written" + sep
                 + (a.dropped() == 0 ? "&a0" : "&c" + a.dropped()) + " &7dropped")));

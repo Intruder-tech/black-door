@@ -31,6 +31,10 @@
 
 ### Current implementation gaps (connection protection and exploit guards)
 
+- Block shapes for movement prediction come from the running server: none on servers without
+  `getCollisionShape`, none for blocks whose shape depends on position or player (scaffolding,
+  powder snow, bamboo, pointed dripstone, moving pistons, shulker boxes), and clients older than
+  the server may see other shapes.
 - Adaptive mode keeps known addresses in memory only: after a restart everyone is unknown, and a
   player whose address changed is unknown too. A backend plugin loaded while players are online
   does not know them until they rejoin.

@@ -72,6 +72,10 @@ public final class BlackDoorEngine {
     private volatile ViolationLedger ledger;
     private volatile SessionRegistry sessions;
     private volatile PacketSecurityEngine packetEngine;
+    private static final int SHAPES_PER_TICK = 500;
+    private volatile io.github.intruder_tech.blackdoor.protocol.world.BlockShapes blockShapes;
+    private volatile boolean blockShapesReady;
+    private volatile long longestShapeBatchNanos;
     private volatile boolean packetLayerAttached;
     private volatile io.github.intruder_tech.blackdoor.protocol.packet.PacketHandler packetHandler;
     private volatile io.github.intruder_tech.blackdoor.network.ConnectionGuard connectionGuard;
@@ -100,6 +104,7 @@ public final class BlackDoorEngine {
                 new ChecksCommand(this),
                 new PlayerCommand(this),
                 new io.github.intruder_tech.blackdoor.core.command.sub.RecordCommand(this),
+                new io.github.intruder_tech.blackdoor.core.command.sub.ShapesCommand(this),
                 new VersionCommand(this),
                 new ReloadCommand(this),
                 new io.github.intruder_tech.blackdoor.core.command.sub.AuthCommand(this),
@@ -223,6 +228,7 @@ public final class BlackDoorEngine {
             logger.error("Could not attach to " + platform.protocol().name() + "; packet checks are inactive.");
             return;
         }
+        startBlockShapes();
         PacketSecurityEngine engineRef = packetEngine;
         io.github.intruder_tech.blackdoor.protocol.ProtocolBridge protocol = platform.protocol();
         heartbeat = java.util.concurrent.Executors.newSingleThreadScheduledExecutor(r -> {
@@ -237,6 +243,51 @@ public final class BlackDoorEngine {
                 logger.error("Transaction heartbeat failed", e);
             }
         }, TRANSACTION_INTERVAL_MS, TRANSACTION_INTERVAL_MS, java.util.concurrent.TimeUnit.MILLISECONDS);
+    }
+
+    /** Builds the block shape table on the server thread, a batch per tick. */
+    private void startBlockShapes() {
+        var source = platform.blockShapeSource();
+        if (source == null) {
+            logger.info("Block shapes are not available on this server; movement prediction stays off.");
+            return;
+        }
+        var table = new io.github.intruder_tech.blackdoor.protocol.world.BlockShapes();
+        blockShapes = table;
+        buildShapes(new io.github.intruder_tech.blackdoor.core.world.ShapeTableBuilder(
+                platform.protocol()::blockState, source, table, SHAPES_PER_TICK));
+    }
+
+    private void buildShapes(io.github.intruder_tech.blackdoor.core.world.ShapeTableBuilder builder) {
+        platform.scheduler().runGlobal(() -> {
+            if (blockShapes == null) {
+                return;
+            }
+            try {
+                long start = System.nanoTime();
+                boolean more = builder.step();
+                longestShapeBatchNanos = Math.max(longestShapeBatchNanos, System.nanoTime() - start);
+                if (more) {
+                    buildShapes(builder);
+                    return;
+                }
+                blockShapesReady = true;
+                logger.info("Block shapes ready: " + blockShapes.known() + " states, longest batch "
+                        + longestShapeBatchNanos / 1_000_000 + " ms.");
+            } catch (RuntimeException e) {
+                logger.error("Could not build block shapes; movement prediction stays off.", e);
+                blockShapes = null;
+            }
+        });
+    }
+
+    /** The block shape table, if this server can provide one (it may still be building). */
+    public Optional<io.github.intruder_tech.blackdoor.protocol.world.BlockShapes> blockShapes() {
+        return Optional.ofNullable(blockShapes);
+    }
+
+    public boolean blockShapesReady() {
+        return blockShapesReady && blockShapes != null;
     }
 
     private io.github.intruder_tech.blackdoor.network.ConnectionGuard newConnectionGuard(boolean forwarded) {
@@ -383,6 +434,8 @@ public final class BlackDoorEngine {
             logger.error("Failed to detach from the packet library", e);
         }
         packetLayerAttached = false;
+        blockShapes = null;
+        blockShapesReady = false;
         try {
             platform.scheduler().cancelAll();
         } catch (RuntimeException e) {
