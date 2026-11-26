@@ -341,8 +341,10 @@ direct connection was refused, a listed address got 60 of 60 pings, a short secr
 The owner confirmed the login system works in game; the server log held no password lines.
 
 **4.5 creative guards:** `packet.item-data` (depth and element limits on creative items) and
-`packet.game-mode` (creative action outside creative mode), each with a GUI item. 225 unit tests.
-**Not verified:** in game, or against a modded client.
+`packet.game-mode` (creative action outside creative mode), each with a GUI item. Diagnostics and
+the GUI Status item show how many packets could not be decoded. 226 unit tests. Owner play test on
+Paper 26.3 with creative and survival use: 19,833 packets, 0 unreadable, 0 findings.
+**Not verified:** against a modded client.
 
 **Remaining in Phase 4:** bot scoring, quarantine, adaptive mode, anti-xray, edge agent.
 See docs/KNOWN_LIMITATIONS.md.

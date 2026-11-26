@@ -64,4 +64,9 @@ public interface ProtocolBridge {
     default boolean sendTransaction(Object connectionKey, int id) {
         return false;
     }
+
+    /** Packets that could not be decoded and passed through uninspected. */
+    default long translationErrors() {
+        return 0;
+    }
 }

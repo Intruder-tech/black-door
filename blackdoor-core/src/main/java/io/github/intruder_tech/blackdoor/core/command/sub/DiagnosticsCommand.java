@@ -57,6 +57,11 @@ public final class DiagnosticsCommand implements Subcommand {
         sender.sendMessage(Text.row("Packet library", protocol.isAvailable()
                 ? "&a" + Text.CHECK + " &f" + Text.escape(protocol.name()) + " &8" + Text.escape(protocol.libraryVersion())
                 : "&c" + Text.CROSS + " unavailable"));
+        if (protocol.isAvailable()) {
+            long unreadable = protocol.translationErrors();
+            sender.sendMessage(Text.row("Unreadable packets", (unreadable == 0 ? "&a0" : "&c" + unreadable)
+                    + " &7passed without inspection"));
+        }
         engine.platform().info().minecraft().ifPresent(v -> sender.sendMessage(Text.row("Protocol features", "&f" + features(v))));
         engine.packetEngine().ifPresent(p -> {
             PacketSecurityEngine.Stats s = p.stats();

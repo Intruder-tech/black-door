@@ -246,6 +246,8 @@ public final class BlackDoorMenus {
             lore.add("&7Players being watched: &f" + stats.sessions());
             lore.add("&7Actions checked: &f" + stats.processed());
             lore.add("&7Actions blocked: &f" + stats.dropped());
+            long unreadable = engine.platform().protocol().translationErrors();
+            lore.add("&7Unreadable packets: " + (unreadable == 0 ? "&f0" : "&c" + unreadable + " &7(not inspected)"));
         });
         for (String reason : engine.degradedReasons()) {
             lore.add("&e! " + Text.escape(reason));

@@ -150,7 +150,7 @@ public final class PacketEventsBridge implements ProtocolBridge {
         }
     }
 
-    /** Packets that failed to translate (and were passed through untouched). */
+    @Override
     public synchronized long translationErrors() {
         return listener == null ? 0 : listener.translationErrors.sum();
     }

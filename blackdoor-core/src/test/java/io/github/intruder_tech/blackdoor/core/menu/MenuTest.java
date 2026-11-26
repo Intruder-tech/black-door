@@ -107,6 +107,12 @@ class MenuTest {
     }
 
     @Test
+    void statusItemShowsUnreadablePackets() {
+        FakeSession s = new FakeSession(RecordingSender.admin(), engine.menus().main());
+        assertThat(s.shown.itemAt(23).orElseThrow().lore()).anyMatch(l -> l.contains("Unreadable packets"));
+    }
+
+    @Test
     void checkIconsAreCentredAndStayOffTheEdges() {
         FakeSession s = new FakeSession(RecordingSender.admin(), engine.menus().packetChecks());
         assertThat(s.shown.items())
