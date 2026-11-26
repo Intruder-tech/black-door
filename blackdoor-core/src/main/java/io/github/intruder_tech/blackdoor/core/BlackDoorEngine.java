@@ -129,8 +129,7 @@ public final class BlackDoorEngine {
         }
         lifecycle = EngineState.STARTING;
         startedAtMillis = time.currentTimeMillis();
-        logger.info("Initializing Black Door " + platform.pluginVersion() + " on " + platform.info().type()
-                + " - Made in India. Guard your world.");
+        drawBanner();
         try {
             lastReload = config.load();
             report(lastReload, "Configuration");
@@ -167,12 +166,37 @@ public final class BlackDoorEngine {
                         ? "edit config.yml and network.yml and run '/" + commands.label() + " reload'."
                         : "'/" + commands.label() + " gui' in game to configure everything."));
             }
+            announceGuard(settings);
         } catch (RuntimeException e) {
             logger.error("Black Door failed to start; shutting down its components.", e);
             shutdownComponents();
             lifecycle = EngineState.STOPPED;
             throw new IllegalStateException("Black Door failed to start", e);
         }
+    }
+
+    /** The start-up picture: a closed door. Plain ASCII, so every console shows it correctly. */
+    private void drawBanner() {
+        logger.info("  .----------.");
+        logger.info("  |  .----.  |    B L A C K   D O O R");
+        logger.info("  |  |    |  |    ---------------------------------");
+        logger.info("  |  '----'  |    Made in India. Guard your world.");
+        logger.info("  |        @ |");
+        logger.info("  |  .----.  |    " + platform.pluginVersion() + " on " + platform.info().type());
+        logger.info("  |__'----'__|    Closing the door...");
+    }
+
+    /** The last start-up line: how well the door is shut. */
+    private void announceGuard(GeneralSettings settings) {
+        if (!degradedReasons().isEmpty()) {
+            logger.warn("[-o] The door is only partly guarded: see the warnings above.");
+            return;
+        }
+        String guards = platform.info().type().isProxy() ? "join and ping guard"
+                : io.github.intruder_tech.blackdoor.packets.PacketCheck.values().length + " packet checks";
+        String mode = settings.mode() == GeneralSettings.Mode.ENFORCE ? "protection ON" : "watch only";
+        logger.info("[#@] The door is guarded: " + guards + ", " + mode + ", ready in "
+                + (time.currentTimeMillis() - startedAtMillis) + " ms.");
     }
 
     /** Stops everything Black Door started. Safe to call more than once. */

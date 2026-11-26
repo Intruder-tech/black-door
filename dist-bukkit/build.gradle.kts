@@ -23,7 +23,8 @@ tasks.jar {
 }
 
 tasks.shadowJar {
-    archiveBaseName = "BlackDoor-Bukkit"
+    // One jar for Paper, Spigot, Purpur and Folia.
+    archiveBaseName = "BlackDoor-Universal"
     archiveClassifier = ""
     // Never depend on the server's copy of shaded libraries (version skew, CVEs).
     relocate("org.yaml.snakeyaml", "io.github.intruder_tech.blackdoor.libs.snakeyaml")

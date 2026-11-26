@@ -40,11 +40,23 @@ class EngineLifecycleTest {
     }
 
     @Test
-    void announcesInitializationBeforeAnythingElse() {
+    void drawsTheDoorBeforeAnythingElseAndSaysWhenItIsGuarded() {
         FakePlatform platform = FakePlatform.paper(dir);
         engine = new BlackDoorEngine(platform, TimeSource.system());
         engine.enable();
-        assertThat(platform.log.get(0)).startsWith("INFO Initializing Black Door 0.0.0-test on PAPER");
+        String banner = String.join("\n", platform.log.subList(0, 7));
+        assertThat(banner).contains("B L A C K   D O O R", "Made in India. Guard your world.",
+                "0.0.0-test on PAPER");
+        assertThat(platform.log).last().asString().contains("The door is guarded", "14 packet checks", "watch only");
+    }
+
+    @Test
+    void doesNotClaimToBeGuardedWhenDegraded() {
+        FakePlatform platform = new FakePlatform(dir, PlatformType.PAPER, MinecraftVersion.of(1, 21, 4), false);
+        engine = new BlackDoorEngine(platform, TimeSource.system());
+        engine.enable();
+        assertThat(platform.logged("WARN", "The door is only partly guarded")).isTrue();
+        assertThat(platform.logged("INFO", "The door is guarded")).isFalse();
     }
 
     @Test

@@ -65,7 +65,7 @@ Intermediate versions are `best-effort` until added to CI.
 
 | Artifact | Contents | Targets |
 |---|---|---|
-| `BlackDoor-Bukkit-<ver>.jar` | Universal Bukkit-family jar (Bukkit adapter + Paper adapter, runtime-selected) | Spigot, Paper, Purpur, Folia |
+| `BlackDoor-Universal-<ver>.jar` | Universal Bukkit-family jar (Bukkit adapter + Paper adapter, runtime-selected) | Spigot, Paper, Purpur, Folia |
 | `BlackDoor-Velocity-<ver>.jar` | Proxy subset (built by `blackdoor-proxy-velocity`, ADR-015) | Velocity 4.x |
 | `BlackDoor-Bungee-<ver>.jar` | Proxy subset (built by `blackdoor-proxy-bungee`, ADR-015) | BungeeCord, Waterfall |
 

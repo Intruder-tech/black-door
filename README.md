@@ -5,8 +5,8 @@
 Server security for Minecraft Java Edition servers and proxies: packet checks, exploit guards, join
 and ping flood protection, staff tools for suspects, and an in-game control panel.
 
-**Status: beta (`1.0.0-beta.1`).** Try it on a test server first and keep checks on Watch until you
-have seen what they report. See [CHANGELOG.md](CHANGELOG.md) for how far it has been tested.
+**Version 1.0.0.** It is new: try it on a test server first and keep checks on Watch until you have
+seen what they report. See [CHANGELOG.md](CHANGELOG.md) for how far it has been tested.
 
 > **Black Door is not a movement or combat anti-cheat.** It does not detect fly, speed, reach, kill
 > aura or similar cheats. Use it alongside an anti-cheat if you need that.
@@ -41,7 +41,7 @@ Download the jar for your platform from the
 
 | Jar | Platforms | Also needs |
 |---|---|---|
-| `BlackDoor-Bukkit-<ver>.jar` | Bukkit, Spigot, Paper, Purpur, Folia (Java 17+) | [PacketEvents](https://github.com/retrooper/packetevents) |
+| `BlackDoor-Universal-<ver>.jar` | Bukkit, Spigot, Paper, Purpur, Folia (Java 17+) | [PacketEvents](https://github.com/retrooper/packetevents) |
 | `BlackDoor-Velocity-<ver>.jar` | Velocity 4.x (Java 25) | |
 | `BlackDoor-Bungee-<ver>.jar` | BungeeCord (Java 17+) | |
 

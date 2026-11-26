@@ -1,8 +1,14 @@
 # Changelog
 
+## 1.0.0
+
+- A new start-up picture in the console, ending with a line that says how well the server is
+  guarded.
+- The server jar is now called `BlackDoor-Universal`: one jar for Paper, Spigot, Purpur and Folia.
+
 ## 1.0.0-beta.1
 
-First public release. A beta: usable, but not yet proven on busy public servers.
+First public release.
 
 **Black Door has no fly, speed, reach, combat or other movement cheat detection.** It guards the
 server against malformed and oversized data, connection floods and account misuse.

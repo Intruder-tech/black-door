@@ -174,7 +174,7 @@ Do not promise that they work on other versions.
 Backend server:
 
 1. Stop the server.
-2. Put `BlackDoor-Bukkit-<version>.jar` and the PacketEvents jar in the `plugins` folder.
+2. Put `BlackDoor-Universal-<version>.jar` and the PacketEvents jar in the `plugins` folder.
 3. Start the server. Black Door creates `config.yml`, `checks.yml` and `network.yml` in
    `plugins/BlackDoor/`.
 4. The console should say Black Door is enabled, with state `RUNNING` and mode `MONITOR`.
