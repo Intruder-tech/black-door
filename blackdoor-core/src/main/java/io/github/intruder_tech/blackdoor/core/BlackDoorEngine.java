@@ -140,8 +140,10 @@ public final class BlackDoorEngine {
                 logger.warn("Degraded: " + reason);
             }
             if (!settings.setupCompleted()) {
-                logger.info("First run: execute '/" + commands.label() + " setup' for the initial security check, then '/"
-                        + commands.label() + " gui' in game to configure everything.");
+                logger.info("First run: execute '/" + commands.label() + " setup' for the initial security check, then "
+                        + (platform.info().type().isProxy()
+                        ? "edit config.yml and network.yml and run '/" + commands.label() + " reload'."
+                        : "'/" + commands.label() + " gui' in game to configure everything."));
             }
         } catch (RuntimeException e) {
             logger.error("Black Door failed to start; shutting down its components.", e);

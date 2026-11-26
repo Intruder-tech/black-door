@@ -112,7 +112,7 @@ class MenuTest {
         assertThat(s.shown.items())
                 .filteredOn(i -> i.slot() < 27)
                 .extracting(MenuItem::slot)
-                .containsExactly(10, 11, 12, 13, 14, 15, 16, 20, 21, 22, 23, 24);
+                .containsExactly(10, 11, 12, 13, 14, 15, 16, 19, 20, 21, 22, 23, 24, 25);
     }
 
     @Test

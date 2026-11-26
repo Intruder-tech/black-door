@@ -2,4 +2,4 @@ name: BlackDoor
 version: '${version}'
 main: io.github.intruder_tech.blackdoor.proxy.bungee.BlackDoorBungeePlugin
 author: Intruder-tech
-description: Server-side security framework (Phase 1 foundation build - no protections active yet).
+description: Server security - join and ping limits for proxies.

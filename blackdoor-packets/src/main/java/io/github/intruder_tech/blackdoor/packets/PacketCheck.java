@@ -17,7 +17,9 @@ public enum PacketCheck {
     PAYLOAD(Confidence.HEURISTIC, "Plugin message or client brand larger than configured limits"),
     BOOK(Confidence.HEURISTIC, "Book with more pages or longer text than configured limits"),
     SIGN(Confidence.DETERMINISTIC, "Sign text with too many or too long lines"),
-    CREATIVE_ITEM(Confidence.HEURISTIC, "Creative inventory action with an impossible slot, amount or size");
+    CREATIVE_ITEM(Confidence.HEURISTIC, "Creative inventory action with an impossible slot, amount or size"),
+    ITEM_DATA(Confidence.HEURISTIC, "Item data nested deeper or holding more entries than configured limits"),
+    GAME_MODE(Confidence.DETERMINISTIC, "Creative inventory action while the player is not in creative mode");
 
     private final Confidence confidence;
     private final String description;

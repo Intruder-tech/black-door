@@ -5,7 +5,7 @@ main: io.github.intruder_tech.blackdoor.platform.bukkit.BlackDoorBukkitPlugin
 api-version: '1.13'
 folia-supported: true
 softdepend: [packetevents]
-description: Server-side security framework (Phase 2 - packet checks in monitor mode; see /blackdoor setup).
+description: Server security - packet and exploit guards, join limits and a login system. Start with /blackdoor setup.
 authors: [Intruder-tech]
 website: https://github.com/Intruder-tech
 commands:

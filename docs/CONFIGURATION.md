@@ -88,6 +88,8 @@ connections) and `packet.max-sessions` (restart required).
 | `book` | `max-pages` (100), `max-page-length` (8192), `max-title-length` (32) |
 | `sign` | `max-line-length` (384); more than 4 lines is always flagged |
 | `creative-item` | `max-amount` (99), `max-bytes` (65536); slots outside -1..45 are always flagged |
+| `item-data` | `max-depth` (32), `max-elements` (8192) of the data in a creative item |
+| `game-mode` | No limits: flags creative actions from a player the server put in another game mode (5 seconds of tolerance after leaving creative) |
 
 **`network.yml`** connection protection: `mode`; per-address `connections`, `pings`, `logins`
 (`burst`, `per-second`); `max-hostname-length`; `max-tracked-addresses`;

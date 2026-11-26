@@ -200,7 +200,7 @@ All in-game commands need operator status or the matching permission. `/bd` is a
 Main page items:
 
 - **Protection** (the master switch): OFF means watch only; ON allows blocking.
-- **Basic cheat checks**: opens the page with the twelve checks.
+- **Basic cheat checks**: opens the page with the fourteen checks.
 - **Join flood protection**: click to change its mode.
 - **Status**, **Reload settings**, **Close**.
 - Two "coming soon" items.

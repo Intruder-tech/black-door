@@ -53,6 +53,10 @@ public final class BlackDoorMenus {
                 "Sign text longer than the game", "allows. Only hacked clients send this."));
         FRIENDLY.put(PacketCheck.CREATIVE_ITEM, new Friendly("Illegal creative items",
                 "Creative-mode items with impossible", "amounts, slots or huge hidden data."));
+        FRIENDLY.put(PacketCheck.ITEM_DATA, new Friendly("Crash items",
+                "Items with data nested far too deep", "or far too big. Can lag or crash."));
+        FRIENDLY.put(PacketCheck.GAME_MODE, new Friendly("Fake creative mode",
+                "Player takes creative-menu items while", "not in creative mode. Only hacks do this."));
     }
 
     /** Plain-language name for a check id (falls back to the id itself). */
@@ -79,6 +83,8 @@ public final class BlackDoorMenus {
             case BOOK -> Icon.BOOK;
             case SIGN -> Icon.SIGN;
             case CREATIVE_ITEM -> Icon.CREATIVE_ITEM;
+            case ITEM_DATA -> Icon.ITEM_DATA;
+            case GAME_MODE -> Icon.GAME_MODE;
         };
     }
 

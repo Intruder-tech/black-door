@@ -6,7 +6,9 @@ import com.github.retrooper.packetevents.event.PacketSendEvent;
 import com.github.retrooper.packetevents.event.UserDisconnectEvent;
 import com.github.retrooper.packetevents.netty.buffer.ByteBufHelper;
 import com.github.retrooper.packetevents.protocol.packettype.PacketType;
+import com.github.retrooper.packetevents.protocol.player.GameMode;
 import com.github.retrooper.packetevents.protocol.player.User;
+import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerChangeGameState;
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerJoinGame;
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerPlayerPositionAndLook;
 import io.github.intruder_tech.blackdoor.protocol.packet.ClientboundPacket;
@@ -87,13 +89,20 @@ final class BlackDoorPacketListener implements PacketListener {
                     WrapperPlayServerJoinGame join = new WrapperPlayServerJoinGame(event);
                     handler.onOutbound(info, new ClientboundPacket.JoinGame(join.getEntityId()));
                     handler.onOutbound(info, new ClientboundPacket.WorldChange(join.getWorldName()));
+                    gameMode(info, join.getGameMode());
                 }
             } else if (event.getPacketType() == PacketType.Play.Server.RESPAWN) {
                 ConnectionInfo info = info(event.getUser(), event.getChannel());
                 if (info != null) {
-                    handler.onOutbound(info, new ClientboundPacket.WorldChange(
-                            new com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerRespawn(event)
-                                    .getWorldName().orElse(null)));
+                    var respawn = new com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerRespawn(event);
+                    handler.onOutbound(info, new ClientboundPacket.WorldChange(respawn.getWorldName().orElse(null)));
+                    gameMode(info, respawn.getGameMode());
+                }
+            } else if (event.getPacketType() == PacketType.Play.Server.CHANGE_GAME_STATE) {
+                ConnectionInfo info = info(event.getUser(), event.getChannel());
+                var change = new WrapperPlayServerChangeGameState(event);
+                if (info != null && change.getReason() == WrapperPlayServerChangeGameState.Reason.CHANGE_GAME_MODE) {
+                    gameMode(info, GameMode.getById((int) change.getValue()));
                 }
             } else if (event.getPacketType() == PacketType.Play.Server.CHUNK_DATA) {
                 ConnectionInfo info = info(event.getUser(), event.getChannel());
@@ -139,6 +148,12 @@ final class BlackDoorPacketListener implements PacketListener {
             }
         } catch (RuntimeException e) {
             translationErrors.increment();
+        }
+    }
+
+    private void gameMode(ConnectionInfo info, GameMode mode) {
+        if (mode != null) {
+            handler.onOutbound(info, new ClientboundPacket.GameModeChange(mode == GameMode.CREATIVE));
         }
     }
 

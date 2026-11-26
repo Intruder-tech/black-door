@@ -53,6 +53,8 @@ final class MenuItems {
         put(Icon.BOOK, "WRITABLE_BOOK", "BOOK_AND_QUILL");
         put(Icon.SIGN, "OAK_SIGN", "SIGN");
         put(Icon.CREATIVE_ITEM, "SILENCE_ARMOR_TRIM_SMITHING_TEMPLATE", "DIAMOND");
+        put(Icon.ITEM_DATA, "SHULKER_SHELL", "CHEST");
+        put(Icon.GAME_MODE, "GRASS_BLOCK", "GRASS");
     }
 
     private MenuItems() {

@@ -45,8 +45,10 @@
   over a public address must be listed in `exempt-addresses`.
 - Book edits on pre-1.13 clients arrive as plugin messages and are only size-checked.
 - Client brand sent during the configuration state (1.20.2+) is not inspected.
-- Item data is limited by packet size only; nesting depth and component counts are not checked.
-- Creative actions are not yet compared with the player's actual game mode.
+- Item depth and element limits apply to creative-mode items only. They are measured after
+  PacketEvents has decoded the item, so a decoder crash would happen first. Written-book text and
+  other non-tag components count as one element.
+- The game-mode check stays silent if the plugin was loaded while the player was already online.
 
 ## Engineering
 16. **World view memory** at high player counts is unresolved (OD-3).

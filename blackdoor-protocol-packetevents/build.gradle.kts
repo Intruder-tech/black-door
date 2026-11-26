@@ -10,3 +10,8 @@ dependencies {
     compileOnly(libs.packetevents.api)
     testImplementation(libs.packetevents.api)
 }
+
+// PacketEvents classes carry JetBrains annotations that are not on the compile classpath.
+tasks.withType<JavaCompile>().configureEach {
+    options.compilerArgs.add("-Xlint:-classfile")
+}

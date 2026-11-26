@@ -12,9 +12,11 @@ public record PacketSettings(Map<PacketCheck, CheckMode> modes, int maxMovementB
 
     /** Limits of the exploit guards (docs/EXPLOIT_PREVENTION.md). Operators can raise them. */
     public record ExploitLimits(int payloadBytes, int channelLength, int brandBytes, int bookPages, int pageLength,
-                                int titleLength, int signLineLength, int creativeAmount, int creativeBytes) {
+                                int titleLength, int signLineLength, int creativeAmount, int creativeBytes,
+                                int itemDepth, int itemElements) {
 
-        static final ExploitLimits DEFAULTS = new ExploitLimits(32767, 128, 256, 100, 8192, 32, 384, 99, 65536);
+        static final ExploitLimits DEFAULTS =
+                new ExploitLimits(32767, 128, 256, 100, 8192, 32, 384, 99, 65536, 32, 8192);
 
         private static ExploitLimits parse(ConfigReader r) {
             ExploitLimits d = DEFAULTS;
@@ -27,7 +29,9 @@ public record PacketSettings(Map<PacketCheck, CheckMode> modes, int maxMovementB
                     r.getInt("packet.book.max-title-length", d.titleLength(), 16, 1024),
                     r.getInt("packet.sign.max-line-length", d.signLineLength(), 15, 32767),
                     r.getInt("packet.creative-item.max-amount", d.creativeAmount(), 1, 127),
-                    r.getInt("packet.creative-item.max-bytes", d.creativeBytes(), 1024, 2097152));
+                    r.getInt("packet.creative-item.max-bytes", d.creativeBytes(), 1024, 2097152),
+                    r.getInt("packet.item-data.max-depth", d.itemDepth(), 8, 512),
+                    r.getInt("packet.item-data.max-elements", d.itemElements(), 256, 99999));
         }
     }
 

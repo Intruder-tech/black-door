@@ -72,5 +72,13 @@ packet:
     mode: monitor
     max-amount: 99
     max-bytes: 65536
+  # Creative items whose data nests too deep or holds too many entries (shulkers inside shulkers).
+  item-data:
+    mode: monitor
+    max-depth: 32
+    max-elements: 8192
+  # Creative inventory actions from a player who is not in creative mode.
+  game-mode:
+    mode: monitor
   # Maximum number of connections tracked at once (memory bound). Restart required.
   max-sessions: 5000

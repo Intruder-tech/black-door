@@ -39,6 +39,7 @@ public final class PacketSecurityEngine implements PacketHandler {
     static final float PITCH_EPSILON = 1.0E-4f;
 
     private static final AttachmentKey<FloodState> FLOOD = AttachmentKey.create("packet-flood");
+    private static final AttachmentKey<GameModeState> GAME_MODE = AttachmentKey.create("game-mode");
 
     private final SessionRegistry sessions;
     private final FindingSink sink;
@@ -143,13 +144,14 @@ public final class PacketSecurityEngine implements PacketHandler {
                 drop |= report(session, cfg, PacketCheck.OVERSIZED, t.kind() + " length " + t.length() + " > " + limit);
             }
         } else {
-            drop |= exploits(session, cfg, wireSize, packet);
+            drop |= exploits(session, cfg, wireSize, packet, now);
         }
         return drop;
     }
 
     /** Exploit guards (docs/EXPLOIT_PREVENTION.md). Details carry numbers only, never client text. */
-    private boolean exploits(PlayerSession session, PacketSettings cfg, int wireSize, ServerboundPacket packet) {
+    private boolean exploits(PlayerSession session, PacketSettings cfg, int wireSize, ServerboundPacket packet,
+                             long now) {
         PacketSettings.ExploitLimits max = cfg.exploits();
         if (packet instanceof ServerboundPacket.PluginMessage p) {
             boolean brand = p.channel().equals("minecraft:brand") || p.channel().equals("MC|Brand");
@@ -168,14 +170,31 @@ public final class PacketSecurityEngine implements PacketHandler {
                 return report(session, cfg, PacketCheck.SIGN, "lines " + s.lines() + ", longest " + s.longestLine());
             }
         } else if (packet instanceof ServerboundPacket.CreativeItem c) {
-            // Slot -1 drops the item; 45 is the off hand.
-            if (c.slot() < -1 || c.slot() > 45 || c.amount() < 0 || c.amount() > max.creativeAmount()
-                    || wireSize > max.creativeBytes()) {
-                return report(session, cfg, PacketCheck.CREATIVE_ITEM,
-                        "slot " + c.slot() + ", amount " + c.amount() + ", " + wireSize + " bytes");
-            }
+            return creative(session, cfg, wireSize, c, now);
         }
         return false;
+    }
+
+    private boolean creative(PlayerSession session, PacketSettings cfg, int wireSize,
+                             ServerboundPacket.CreativeItem c, long now) {
+        PacketSettings.ExploitLimits max = cfg.exploits();
+        boolean drop = false;
+        // Slot -1 drops the item; 45 is the off hand.
+        if (c.slot() < -1 || c.slot() > 45 || c.amount() < 0 || c.amount() > max.creativeAmount()
+                || wireSize > max.creativeBytes()) {
+            drop |= report(session, cfg, PacketCheck.CREATIVE_ITEM,
+                    "slot " + c.slot() + ", amount " + c.amount() + ", " + wireSize + " bytes");
+        }
+        if (c.depth() > max.itemDepth() || c.elements() > max.itemElements()) {
+            drop |= report(session, cfg, PacketCheck.ITEM_DATA,
+                    "item data depth " + c.depth() + ", elements " + c.elements());
+        }
+        // No game mode seen (plugin loaded mid-session) means no evidence.
+        GameModeState mode = session.attachment(GAME_MODE, () -> null);
+        if (mode != null && !mode.mayUseCreative(now)) {
+            drop |= report(session, cfg, PacketCheck.GAME_MODE, "creative action in slot " + c.slot());
+        }
+        return drop;
     }
 
     private boolean movement(PlayerSession session, PacketSettings cfg, int wireSize, ServerboundPacket.Movement m) {
@@ -316,6 +335,8 @@ public final class PacketSecurityEngine implements PacketHandler {
             }
             if (packet instanceof ClientboundPacket.JoinGame j) {
                 session.entityId(j.entityId());
+            } else if (packet instanceof ClientboundPacket.GameModeChange g) {
+                session.attachment(GAME_MODE, GameModeState::new).update(g.creative(), time.nanoTime());
             } else if (packet instanceof ClientboundPacket.SyncPosition s) {
                 session.teleports().sent(s.teleportId());
             } else if (packet instanceof ClientboundPacket.Velocity v) {

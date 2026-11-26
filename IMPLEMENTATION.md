@@ -340,9 +340,12 @@ direct connection was refused, a listed address got 60 of 60 pings, a short secr
 **Not verified:** with a real proxy in front; BungeeGuard tokens are not implemented.
 The owner confirmed the login system works in game; the server log held no password lines.
 
-**Remaining in Phase 4:** item data
-structure limits, creative game-mode check, bot scoring, quarantine, adaptive mode, anti-xray,
-edge agent. See docs/KNOWN_LIMITATIONS.md.
+**4.5 creative guards:** `packet.item-data` (depth and element limits on creative items) and
+`packet.game-mode` (creative action outside creative mode), each with a GUI item. 225 unit tests.
+**Not verified:** in game, or against a modded client.
+
+**Remaining in Phase 4:** bot scoring, quarantine, adaptive mode, anti-xray, edge agent.
+See docs/KNOWN_LIMITATIONS.md.
 
 ## 11. Next Steps
 

@@ -52,8 +52,14 @@ public sealed interface ServerboundPacket {
     record SignUpdate(int lines, int longestLine) implements ServerboundPacket {
     }
 
-    /** Creative-mode inventory action. {@code amount} is 0 for an empty stack. */
-    record CreativeItem(int slot, int amount) implements ServerboundPacket {
+    /**
+     * Creative-mode inventory action. {@code amount} is 0 for an empty stack; {@code depth} and
+     * {@code elements} describe how the item's data nests (see {@link StructureSize}).
+     */
+    record CreativeItem(int slot, int amount, int depth, int elements) implements ServerboundPacket {
+        public CreativeItem(int slot, int amount) {
+            this(slot, amount, 0, 0);
+        }
     }
 
     /** Any other packet; only counted for rate and size. */

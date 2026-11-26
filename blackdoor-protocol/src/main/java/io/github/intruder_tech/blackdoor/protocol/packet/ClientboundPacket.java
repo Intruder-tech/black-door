@@ -7,6 +7,10 @@ public sealed interface ClientboundPacket {
     record JoinGame(int entityId) implements ClientboundPacket {
     }
 
+    /** The server told the client its game mode (login, respawn or a change). */
+    record GameModeChange(boolean creative) implements ClientboundPacket {
+    }
+
     /** Server teleport ("synchronize player position") with the id the client must confirm. */
     record SyncPosition(int teleportId) implements ClientboundPacket {
     }
