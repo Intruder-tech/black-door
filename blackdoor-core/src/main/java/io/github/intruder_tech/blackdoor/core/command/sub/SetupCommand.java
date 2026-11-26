@@ -162,11 +162,13 @@ public final class SetupCommand implements Subcommand {
         }
         var status = found.get();
         List<String> off = status.configuredOff();
-        if (!off.isEmpty()) {
-            lines.add(warn("Paper anti-xray is off in: " + String.join(", ", off) + ". Turn it on with the Anti X-Ray"
-                    + " item in /" + engine.commands().label() + " gui, then restart the server."
-                    + (status.changedSinceStart()
-                    ? " The setting changed since the server started and applies after the restart." : "")));
+        String panel = "the Anti X-Ray item in /" + engine.commands().label() + " gui";
+        if (!off.isEmpty() && status.changedSinceStart()) {
+            lines.add(warn("Paper anti-xray was switched off in: " + String.join(", ", off) + ". That applies after the next"
+                    + " restart. To keep it on, switch it back with " + panel + " before restarting."));
+        } else if (!off.isEmpty()) {
+            lines.add(warn("Paper anti-xray is off in: " + String.join(", ", off) + ". Turn it on with " + panel
+                    + ", then restart the server."));
         } else if (status.pending()) {
             List<String> stillOff = status.runningOff();
             lines.add(warn("Paper anti-xray is set to on but not running yet ("

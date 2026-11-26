@@ -85,7 +85,8 @@ class AntiXraySetupTest {
         defaults(true);
         start(PlatformType.PAPER);
         defaults(false);
-        assertThat(antiXrayLine()).contains("WARN").contains("off in: world").contains("since the server started");
+        assertThat(antiXrayLine()).contains("WARN").contains("switched off").contains("world")
+                .contains("after the next restart").contains("To keep it on").doesNotContain("Turn it on");
     }
 
     @Test
