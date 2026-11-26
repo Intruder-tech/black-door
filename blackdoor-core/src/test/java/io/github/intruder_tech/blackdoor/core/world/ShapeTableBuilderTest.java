@@ -11,6 +11,20 @@ import static org.assertj.core.api.Assertions.assertThat;
 class ShapeTableBuilderTest {
 
     @Test
+    void marksBlocksThatMoveAPlayerDifferently() {
+        List<String> states = List.of("minecraft:water[level=0]", "minecraft:oak_slab[type=bottom,waterlogged=true]",
+                "minecraft:red_bed[part=foot]", "minecraft:stone", "minecraft:ladder[facing=north]");
+        BlockShapes into = new BlockShapes();
+        new ShapeTableBuilder(id -> id < states.size() ? Optional.of(states.get(id)) : Optional.empty(),
+                name -> Optional.of(List.of()), into, 100).step();
+        assertThat(into.special(0)).isTrue();
+        assertThat(into.special(1)).isTrue();
+        assertThat(into.special(2)).isTrue();
+        assertThat(into.special(3)).isFalse();
+        assertThat(into.special(4)).isTrue();
+    }
+
+    @Test
     void buildsInBatchesAndMarksWhatItCannotKnow() {
         List<String> states = List.of("minecraft:air", "minecraft:stone", "minecraft:scaffolding[bottom=false]",
                 "minecraft:broken", "minecraft:red_shulker_box[facing=up]");

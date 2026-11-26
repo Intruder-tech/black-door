@@ -18,6 +18,10 @@ public final class ShapeTableBuilder {
     private static final int END_AFTER = 64;
     private static final Set<String> POSITIONAL = Set.of("scaffolding", "powder_snow", "bamboo", "pointed_dripstone",
             "moving_piston");
+    private static final Set<String> SPECIAL = Set.of("water", "lava", "bubble_column", "ladder", "vine",
+            "weeping_vines", "weeping_vines_plant", "twisting_vines", "twisting_vines_plant", "cave_vines",
+            "cave_vines_plant", "cobweb", "slime_block", "honey_block", "sweet_berry_bush", "kelp", "kelp_plant",
+            "seagrass", "tall_seagrass");
 
     private final IntFunction<Optional<String>> names;
     private final Function<String, Optional<List<BlockShapes.Box>>> server;
@@ -58,16 +62,32 @@ public final class ShapeTableBuilder {
             return;
         }
         try {
-            server.apply(name).ifPresentOrElse(boxes -> into.put(id, boxes), () -> into.putUnknown(id));
+            server.apply(name).ifPresentOrElse(boxes -> {
+                if (special(name)) {
+                    into.putSpecial(id, boxes);
+                } else {
+                    into.put(id, boxes);
+                }
+            }, () -> into.putUnknown(id));
         } catch (RuntimeException e) {
             into.putUnknown(id);
         }
     }
 
     private static boolean positional(String name) {
+        String block = block(name);
+        return POSITIONAL.contains(block) || block.endsWith("shulker_box");
+    }
+
+    private static boolean special(String name) {
+        String block = block(name);
+        return SPECIAL.contains(block) || block.endsWith("_bed") || name.contains("waterlogged=true");
+    }
+
+    /** The block id without namespace and properties. */
+    private static String block(String name) {
         int end = name.indexOf('[');
         String block = end < 0 ? name : name.substring(0, end);
-        block = block.substring(block.indexOf(':') + 1);
-        return POSITIONAL.contains(block) || block.endsWith("shulker_box");
+        return block.substring(block.indexOf(':') + 1);
     }
 }

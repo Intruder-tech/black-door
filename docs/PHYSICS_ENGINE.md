@@ -64,6 +64,17 @@ other projects (clean-room policy).
 | Entity collisions (pushing) | 3 | Treated as uncertainty source. |
 | Teleports, respawn, world change | 2 | Hard resync points. |
 
+### Verified on 26.3 against recorded play (2026-11-26)
+
+- Gravity: next vertical speed is `(speed - 0.08) * 0.98`; speeds under 0.003 become 0.
+- Jump: 0.42, plus 0.1 per jump boost level.
+- Vertical movement is resolved at the old horizontal position; a landing or grounded player then
+  steps up to 0.6 onto a block at the new position.
+- The tick after moving through water still carries water drag, so it gets no verdict.
+
+Only height is predicted so far, only in tests (`blackdoor-physics`). Horizontal movement,
+fluids, climbing and special blocks are not modelled.
+
 ## 5. Uncertainty Model
 
 ε (accepted offset) = base precision + Σ uncertainty terms, each **bounded and logged**:

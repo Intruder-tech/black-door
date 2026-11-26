@@ -12,7 +12,7 @@ import java.util.concurrent.atomic.AtomicReferenceArray;
 /**
  * Exact collision boxes per global block-state id. An id is <em>unknown</em> until it is put, and
  * stays unknown when the shape cannot be told; unknown means physics gives no verdict. An empty
- * list is a known block without collision. Safe for one writer and many readers.
+ * list is a known block without collision; a <em>special</em> one also acts on the player. Safe for one writer and many readers.
  */
 public final class BlockShapes {
 
@@ -23,15 +23,25 @@ public final class BlockShapes {
     }
 
     /** {@code boxes} is null for an unknown shape. */
-    private record Entry(List<Box> boxes) {
+    private record Entry(List<Box> boxes, boolean special) {
     }
 
-    private static final Entry UNKNOWN = new Entry(null);
+    private static final Entry UNKNOWN = new Entry(null, false);
 
     private final AtomicReferenceArray<Entry> entries = new AtomicReferenceArray<>(CAPACITY);
 
     public void put(int id, List<Box> boxes) {
-        set(id, new Entry(List.copyOf(boxes)));
+        set(id, new Entry(List.copyOf(boxes), false));
+    }
+
+    /** A block that moves a player in ways its boxes do not show (fluids, ladders, slime...). */
+    public void putSpecial(int id, List<Box> boxes) {
+        set(id, new Entry(List.copyOf(boxes), true));
+    }
+
+    public boolean special(int id) {
+        Entry entry = id >= 0 && id < CAPACITY ? entries.get(id) : null;
+        return entry != null && entry.special();
     }
 
     public void putUnknown(int id) {
@@ -70,6 +80,9 @@ public final class BlockShapes {
                 continue;
             }
             StringBuilder line = new StringBuilder().append(id).append(' ');
+            if (entry.special()) {
+                line.append('!');
+            }
             if (entry.boxes() == null) {
                 line.append('?');
             } else if (entry.boxes().isEmpty()) {
@@ -101,6 +114,10 @@ public final class BlockShapes {
                 shapes.putUnknown(id);
                 continue;
             }
+            boolean special = value.startsWith("!");
+            if (special) {
+                value = value.substring(1);
+            }
             List<Box> boxes = new ArrayList<>();
             if (!value.equals("-")) {
                 for (String box : value.split(";")) {
@@ -109,7 +126,11 @@ public final class BlockShapes {
                             Double.parseDouble(v[3]), Double.parseDouble(v[4]), Double.parseDouble(v[5])));
                 }
             }
-            shapes.put(id, boxes);
+            if (special) {
+                shapes.putSpecial(id, boxes);
+            } else {
+                shapes.put(id, boxes);
+            }
         }
         return shapes;
     }

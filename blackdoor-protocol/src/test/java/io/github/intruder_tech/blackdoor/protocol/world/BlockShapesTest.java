@@ -23,6 +23,23 @@ class BlockShapesTest {
     }
 
     @Test
+    void specialBlocksKeepTheirBoxesAndTheMarkThroughTheFile() throws Exception {
+        BlockShapes shapes = new BlockShapes();
+        shapes.putSpecial(89, List.of());
+        shapes.put(1, List.of());
+        assertThat(shapes.boxes(89)).contains(List.of());
+        assertThat(shapes.special(89)).isTrue();
+        assertThat(shapes.special(1)).isFalse();
+        assertThat(shapes.special(2)).isFalse();
+        StringWriter out = new StringWriter();
+        shapes.write(out, "26.3");
+        assertThat(out.toString()).contains("89 !-\n");
+        BlockShapes back = BlockShapes.read(new StringReader(out.toString()));
+        assertThat(back.special(89)).isTrue();
+        assertThat(back.boxes(89)).contains(List.of());
+    }
+
+    @Test
     void roundTripsThroughTheFileFormat() throws Exception {
         BlockShapes shapes = new BlockShapes();
         var slab = new BlockShapes.Box(0, 0, 0, 1, 0.5, 1);

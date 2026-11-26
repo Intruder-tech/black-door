@@ -53,6 +53,7 @@ include(
     "blackdoor-violations",
     "blackdoor-state",
     "blackdoor-world",
+    "blackdoor-physics",
     "blackdoor-packets",
     "blackdoor-network",
     "blackdoor-auth",
