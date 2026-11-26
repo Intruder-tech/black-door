@@ -74,6 +74,7 @@ public final class BlackDoorEngine {
     private static final String KICK_MESSAGE = "Kicked by Black Door: suspicious game client.";
     private volatile io.github.intruder_tech.blackdoor.enforcement.BanBook bans;
     private volatile io.github.intruder_tech.blackdoor.enforcement.CaseBook cases;
+    private volatile io.github.intruder_tech.blackdoor.enforcement.QuarantineBook quarantine;
     private volatile SessionRegistry sessions;
     private volatile PacketSecurityEngine packetEngine;
     private static final int SHAPES_PER_TICK = 500;
@@ -116,6 +117,7 @@ public final class BlackDoorEngine {
                 new io.github.intruder_tech.blackdoor.core.command.sub.AuthCommand(this),
                 new io.github.intruder_tech.blackdoor.core.command.sub.BansCommand(this),
                 new io.github.intruder_tech.blackdoor.core.command.sub.CasesCommand(this),
+                new io.github.intruder_tech.blackdoor.core.command.sub.QuarantineCommand(this),
                 new DiagnosticsCommand(this)), logger);
         this.api = platform::pluginVersion;
     }
@@ -221,6 +223,12 @@ public final class BlackDoorEngine {
             if (cases.unreadableLines() > 0) {
                 logger.warn("enforcement/cases.tsv: " + cases.unreadableLines() + " unreadable line(s) ignored.");
             }
+            quarantine = new io.github.intruder_tech.blackdoor.enforcement.QuarantineBook(
+                    platform.dataDirectory().resolve("enforcement").resolve("quarantine.tsv"), time);
+            if (quarantine.unreadableLines() > 0) {
+                logger.warn("enforcement/quarantine.tsv: " + quarantine.unreadableLines()
+                        + " unreadable line(s) ignored.");
+            }
         }
         if (platform.info().type().isProxy()) {
             // Players connect to a proxy directly, so their addresses are real here.
@@ -298,6 +306,13 @@ public final class BlackDoorEngine {
         java.util.UUID id = decision.subject().uniqueId();
         platform.scheduler().runForPlayer(id, () -> {
             var rules = enforcementSettings();
+            if (rules.mode() == io.github.intruder_tech.blackdoor.enforcement.EnforcementSettings.Mode.QUARANTINE) {
+                if (!platform.exempt(id) && hold(id, name, "system", why)) {
+                    openCase(decision, name,
+                            io.github.intruder_tech.blackdoor.enforcement.CaseBook.Action.QUARANTINE);
+                }
+                return;
+            }
             var book = bans;
             boolean ban = book != null && book.nextKickBans(id, rules);
             if (!platform.kick(id, ban ? banText(java.time.Duration.ofMinutes(rules.banMinutes())) : KICK_MESSAGE)) {
@@ -343,6 +358,85 @@ public final class BlackDoorEngine {
         }
     }
 
+    /** Puts a player in quarantine. Call on the player's thread. False if already held. */
+    private boolean hold(java.util.UUID id, String name, String actor, String why) {
+        var book = quarantine;
+        if (book == null || !book.add(id, name, enforcementSettings().quarantineMinutes())) {
+            return false;
+        }
+        logger.warn("Quarantined " + name + why + ".");
+        record(actor, "enforcement.quarantine " + name, "held");
+        platform.message(id, "Black Door put you in quarantine: you can move and chat, nothing else. "
+                + "Staff can release you.");
+        saveQuarantine();
+        return true;
+    }
+
+    /** Staff quarantine of an online player. False if already held, exempt or not possible here. */
+    public boolean quarantinePlayer(java.util.UUID id, String name, String actor) {
+        if (quarantine == null || quarantine.holds(id)) {
+            return false;
+        }
+        String clean = io.github.intruder_tech.blackdoor.common.text.LogSanitizer.sanitize(name, 32);
+        platform.scheduler().runForPlayer(id, () -> {
+            if (!platform.exempt(id)) {
+                hold(id, clean, actor, " (by " + actor + ")");
+            }
+        });
+        return true;
+    }
+
+    /** Frees a quarantined player by name. False if nobody of that name is held. */
+    public boolean release(String name, String actor) {
+        var book = quarantine;
+        if (book == null) {
+            return false;
+        }
+        var held = book.active().stream().filter(h -> h.name().equalsIgnoreCase(name)).findFirst();
+        if (held.isEmpty()) {
+            return false;
+        }
+        free(held.get().id(), held.get().name(), actor);
+        return true;
+    }
+
+    private void free(java.util.UUID id, String name, String actor) {
+        if (quarantine != null && quarantine.release(id)) {
+            record(actor, "enforcement.release " + name, "released");
+            platform.scheduler().runForPlayer(id, () -> platform.message(id,
+                    "Black Door released you from quarantine."));
+            saveQuarantine();
+        }
+    }
+
+    /** Asked on every game event of a player, from any thread. */
+    public boolean isQuarantined(java.util.UUID id) {
+        var book = quarantine;
+        return book != null && book.holds(id);
+    }
+
+    /** Players in quarantine; empty on proxies. */
+    public Optional<io.github.intruder_tech.blackdoor.enforcement.QuarantineBook> quarantine() {
+        return Optional.ofNullable(quarantine);
+    }
+
+    private void saveQuarantine() {
+        var book = quarantine;
+        if (book == null) {
+            return;
+        }
+        boolean queued = submitWork(() -> {
+            try {
+                book.save();
+            } catch (java.io.IOException e) {
+                logger.error("Could not save quarantine; it will be lost on restart.", e);
+            }
+        });
+        if (!queued) {
+            logger.warn("Too busy to save quarantine now.");
+        }
+    }
+
     /** Saved cases for staff review; empty on proxies. */
     public Optional<io.github.intruder_tech.blackdoor.enforcement.CaseBook> cases() {
         return Optional.ofNullable(cases);
@@ -362,6 +456,10 @@ public final class BlackDoorEngine {
                 && bans != null) {
             bans.forget(found.player());
             saveBans();
+        }
+        if (falseAlarm
+                && found.action() != io.github.intruder_tech.blackdoor.enforcement.CaseBook.Action.WOULD_KICK) {
+            free(found.player(), found.name(), actor);
         }
         record(actor, "enforcement.case " + caseId + " " + found.name(), falseAlarm ? "false alarm" : "confirmed");
         saveCases();

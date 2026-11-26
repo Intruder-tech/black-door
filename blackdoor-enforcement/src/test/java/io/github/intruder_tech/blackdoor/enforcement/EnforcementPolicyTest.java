@@ -82,6 +82,16 @@ class EnforcementPolicyTest {
     }
 
     @Test
+    void quarantineModeActsLikeKickModeAndIgnoresWatchOnlyChecks() {
+        settings = new EnforcementSettings(EnforcementSettings.Mode.QUARANTINE, 2, 60);
+        watched(0);
+        watched(1);
+        assertThat(blocked(Confidence.DETERMINISTIC, 2)).isEmpty();
+        assertThat(blocked(Confidence.DETERMINISTIC, 3))
+                .hasValueSatisfying(d -> assertThat(d.kick()).isTrue());
+    }
+
+    @Test
     void doesNothingWhenSwitchedOff() {
         settings = new EnforcementSettings(DISABLED, 1, 60);
         assertThat(blocked(Confidence.DETERMINISTIC, 0)).isEmpty();

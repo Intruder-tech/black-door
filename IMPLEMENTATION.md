@@ -19,7 +19,11 @@ the Punishments page in game. **5.3 saved cases and staff review built** (branch
 `enforcement/cases.tsv`, `/blackdoor cases`, GUI "Review cases"). Live-tested 2026-11-26 on the
 scratch Paper 1.21.11 server (21 of 21 cases, including cases after a restart and a false alarm
 lifting a ban); the GUI pages were not clicked in game.
-Not built: quarantine. No statistical checks are planned while nothing would feed them.
+**5.4 quarantine built** (branch `feat/quarantine`: `enforcement/quarantine.tsv`, mode
+`quarantine`, `/blackdoor quarantine`, GUI page). Live-tested on the scratch Paper 1.21.11 server
+(13 of 13: cannot break blocks or run commands, takes no damage, held across rejoin and restart,
+release and staff quarantine work). Not tried live: containers, combat, dropping items, other
+server versions. No statistical checks or setbacks are planned while nothing would feed them.
 **Protections active:** 14 packet checks and join/ping flood protection, **monitor mode by default**
 (they log findings; they block only if set to `mitigate` and the global mode is `enforce`).
 **Next gate:** Owner tries auto kick on the test server.

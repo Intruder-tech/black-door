@@ -30,6 +30,7 @@ public final class CaseBook {
 
     public enum Action {
         WOULD_KICK,
+        QUARANTINE,
         KICK,
         BAN
     }

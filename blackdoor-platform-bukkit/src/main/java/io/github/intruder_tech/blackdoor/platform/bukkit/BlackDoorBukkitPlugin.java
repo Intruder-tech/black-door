@@ -41,6 +41,7 @@ public final class BlackDoorBukkitPlugin extends JavaPlugin {
             engine.enable();
             getServer().getPluginManager().registerEvents(presenter, this);
             getServer().getPluginManager().registerEvents(new PresenceListener(engine), this);
+            new QuarantineListener(engine).start(this);
             registerCommand(scheduler);
             startLoginSystem(scheduler);
         } catch (RuntimeException e) {

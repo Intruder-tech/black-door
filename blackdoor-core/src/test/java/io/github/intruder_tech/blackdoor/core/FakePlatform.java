@@ -22,6 +22,18 @@ public final class FakePlatform implements Platform {
     public final List<String> log = new CopyOnWriteArrayList<>();
     public final AtomicInteger cancelAllCalls = new AtomicInteger();
     public final List<String> kicked = new CopyOnWriteArrayList<>();
+    public final List<String> messages = new CopyOnWriteArrayList<>();
+    public final java.util.Set<UUID> exempt = java.util.concurrent.ConcurrentHashMap.newKeySet();
+
+    @Override
+    public boolean exempt(UUID playerId) {
+        return exempt.contains(playerId);
+    }
+
+    @Override
+    public void message(UUID playerId, String message) {
+        messages.add(message);
+    }
 
     @Override
     public boolean kick(UUID playerId, String message) {

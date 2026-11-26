@@ -113,6 +113,42 @@ class EnforcementWiringTest {
     }
 
     @Test
+    void quarantineModeHoldsThePlayerWithoutKicking() {
+        set("mode", "quarantine");
+        blockedFindings(5);
+        assertThat(platform.kicked).isEmpty();
+        assertThat(engine.isQuarantined(id)).isTrue();
+        assertThat(platform.messages).anyMatch(m -> m.contains("quarantine"));
+        assertThat(engine.cases().orElseThrow().newest(1)).singleElement()
+                .satisfies(c -> assertThat(c.action())
+                        .isEqualTo(io.github.intruder_tech.blackdoor.enforcement.CaseBook.Action.QUARANTINE));
+
+        var staff = new io.github.intruder_tech.blackdoor.core.command.RecordingSender("Mod",
+                java.util.Set.of("blackdoor.command.quarantine"));
+        engine.commands().dispatch(staff, new String[]{"quarantine"});
+        assertThat(staff.all()).contains("tester");
+        engine.commands().dispatch(staff, new String[]{"quarantine", "release", "Tester"});
+        assertThat(staff.all()).contains("Released");
+        assertThat(engine.isQuarantined(id)).isFalse();
+    }
+
+    @Test
+    void aFalseAlarmReleasesFromQuarantine() {
+        set("mode", "quarantine");
+        blockedFindings(5);
+        assertThat(engine.judgeCase(1, true, "Mod")).isTrue();
+        assertThat(engine.isQuarantined(id)).isFalse();
+    }
+
+    @Test
+    void exemptPlayersAreNeverQuarantined() {
+        platform.exempt.add(id);
+        set("mode", "quarantine");
+        blockedFindings(5);
+        assertThat(engine.isQuarantined(id)).isFalse();
+    }
+
+    @Test
     void watchModeOnlyLogs() {
         set("mode", "watch");
         blockedFindings(5);

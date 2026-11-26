@@ -57,6 +57,15 @@ public interface Platform {
         return false;
     }
 
+    /** Whether staff exempted this online player from automatic action. Call on the player's thread. */
+    default boolean exempt(java.util.UUID playerId) {
+        return false;
+    }
+
+    /** Tells an online player something, if they are online. Call on the player's thread. */
+    default void message(java.util.UUID playerId, String message) {
+    }
+
     /** In-game menus, where the platform supports them (Bukkit-family servers). */
     default java.util.Optional<io.github.intruder_tech.blackdoor.core.menu.MenuPresenter> menus() {
         return java.util.Optional.empty();

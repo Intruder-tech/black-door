@@ -116,7 +116,7 @@ public final class BlackDoorMenus {
                     s -> s.show(packetChecks())));
             items.add(locked(14, Icon.LOCKED_COMBAT, "Combat checks", "Reach, kill aura...", "Phase 3"));
             items.add(new MenuItem(31, Icon.AUTO_KICK, "&fPunishments",
-                    List.of("&7Auto kick and temporary bans.", "&7Banned now: &f"
+                    List.of("&7Auto action, quarantine and bans.", "&7Banned now: &f"
                             + engine.bans().map(b -> b.active().size()).orElse(0), "", "&eClick to open"),
                     s -> s.show(punishments())));
             items.add(antiXrayItem(16, session.viewer().hasPermission(SettingsService.EDIT_PERMISSION)));
@@ -157,10 +157,13 @@ public final class BlackDoorMenus {
     public MenuPage punishments() {
         return session -> {
             List<MenuItem> items = new ArrayList<>();
-            items.add(autoKickItem(11));
-            items.add(new MenuItem(13, Icon.CASES, "&fReview cases",
-                    List.of("&7Who was kicked or banned, and why.", "", "&eClick to open"), s -> s.show(cases())));
-            items.add(banLengthItem(15));
+            items.add(autoKickItem(10));
+            items.add(new MenuItem(12, Icon.CASES, "&fReview cases",
+                    List.of("&7Who was acted on, and why.", "", "&eClick to open"), s -> s.show(cases())));
+            items.add(banLengthItem(14));
+            items.add(new MenuItem(16, Icon.QUARANTINE, "&fQuarantine",
+                    List.of("&7Held now: &f" + engine.quarantine().map(q -> q.active().size()).orElse(0), "",
+                            "&eClick to open"), s -> s.show(quarantine())));
             var banned = engine.bans().map(b -> b.active()).orElse(List.of());
             long now = engine.time().currentTimeMillis();
             for (int i = 0; i < Math.min(7, banned.size()); i++) {
@@ -195,12 +198,14 @@ public final class BlackDoorMenus {
 
     private MenuItem caseItem(int slot, io.github.intruder_tech.blackdoor.enforcement.CaseBook.Case found) {
         String what = switch (found.action()) {
-            case WOULD_KICK -> "&eWould be kicked";
+            case WOULD_KICK -> "&eWould be acted on";
+            case QUARANTINE -> "&dQuarantined";
             case KICK -> "&6Kicked";
             case BAN -> "&cBanned";
         };
         Icon icon = found.falseAlarm() ? Icon.CASE_FALSE : switch (found.action()) {
             case WOULD_KICK -> Icon.CASE_WATCH;
+            case QUARANTINE -> Icon.QUARANTINE;
             case KICK -> Icon.CASE_KICK;
             case BAN -> Icon.CASE_BAN;
         };
@@ -248,7 +253,7 @@ public final class BlackDoorMenus {
         lore.add("");
         lore.add("&7Now: " + (on ? "&c" : "&8") + banLength(rules.banMinutes()));
         if (on && rules.mode() != io.github.intruder_tech.blackdoor.enforcement.EnforcementSettings.Mode.KICK) {
-            lore.add("&6Only bans while Auto kick is on Kick.");
+            lore.add("&6Only bans while Auto action is on Kick.");
         }
         lore.add("");
         lore.add("&eClick to change: &8Off > 15 minutes > 1 hour > 1 day");
@@ -267,37 +272,84 @@ public final class BlackDoorMenus {
         String mode = settings.current(setting);
         var rules = engine.enforcementSettings();
         List<String> lore = new ArrayList<>();
-        lore.add("&7Kicks a player after &f" + rules.findingsToKick() + " &7blocked");
+        lore.add("&7What happens after &f" + rules.findingsToKick() + " &7blocked");
         lore.add("&7actions in &f" + rules.windowSeconds() + " &7seconds.");
         lore.add("&7Spam-style guesses never count.");
         lore.add("");
-        lore.add("&7Now: " + kickLabel(mode) + " &8- " + switch (mode) {
+        lore.add("&7Now: " + actionColour(mode) + actionName(mode) + " &8- " + switch (mode) {
             case "kick" -> "&7kicks";
-            case "watch" -> "&7only logs who would be kicked";
-            default -> "&7nobody is kicked";
+            case "quarantine" -> "&7player may only move and chat";
+            case "watch" -> "&7only logs what would happen";
+            default -> "&7nothing happens";
         });
+        boolean acts = mode.equals("kick") || mode.equals("quarantine");
         boolean on = "enforce".equals(settings.current(settings.find(SettingsService.GLOBAL_MODE).orElseThrow()));
-        if (mode.equals("kick") && !on) {
-            lore.add("&6Will only kick once Protection is ON.");
+        if (acts && !on) {
+            lore.add("&6Will only act once Protection is ON.");
         }
         lore.add("");
-        lore.add("&eClick to change: &8Off > &aWatch &8> &cKick");
-        String next = switch (settings.next(setting)) {
+        lore.add("&eClick to change: &8Off > &aWatch &8> &dQuarantine &8> &cKick");
+        String next = actionName(settings.next(setting));
+        return new MenuItem(slot, mode.equals("disabled") ? Icon.CHECK_DISABLED : Icon.AUTO_KICK,
+                "&fAuto action &8| " + actionColour(mode) + actionName(mode), lore,
+                s -> cycle(s, setting, "Auto action is now " + next), acts);
+    }
+
+    private static String actionName(String mode) {
+        return switch (mode) {
             case "kick" -> "Kick";
+            case "quarantine" -> "Quarantine";
             case "watch" -> "Watch";
             default -> "Off";
         };
-        return new MenuItem(slot, mode.equals("disabled") ? Icon.CHECK_DISABLED : Icon.AUTO_KICK,
-                "&fAuto kick &8| " + kickLabel(mode), lore,
-                s -> cycle(s, setting, "Auto kick is now " + next), mode.equals("kick"));
     }
 
-    private static String kickLabel(String mode) {
+    private static String actionColour(String mode) {
         return switch (mode) {
-            case "kick" -> "&cKick";
-            case "watch" -> "&aWatch";
-            default -> "&8Off";
+            case "kick" -> "&c";
+            case "quarantine" -> "&d";
+            case "watch" -> "&a";
+            default -> "&8";
         };
+    }
+
+    /** Who is held, and for how long new ones are; clicking a player releases them. */
+    public MenuPage quarantine() {
+        return session -> {
+            List<MenuItem> items = new ArrayList<>();
+            Setting length = settings.find(SettingsService.QUARANTINE_LENGTH).orElseThrow();
+            int minutes = engine.enforcementSettings().quarantineMinutes();
+            String next = quarantineLength(Integer.parseInt(settings.next(length)));
+            items.add(new MenuItem(4, Icon.TEMP_BAN, "&fQuarantine lasts &8| &d" + quarantineLength(minutes),
+                    List.of("&7Applies to players held from now on.", "",
+                            "&eClick to change: &815 minutes > 1 hour > 1 day > until released"),
+                    s -> cycle(s, length, "Quarantine now lasts " + next)));
+            var held = engine.quarantine().map(q -> q.active()).orElse(List.of());
+            long now = engine.time().currentTimeMillis();
+            for (int i = 0; i < Math.min(14, held.size()); i++) {
+                var player = held.get(i);
+                items.add(new MenuItem(i < 7 ? 10 + i : 19 + i - 7, Icon.BANNED_PLAYER,
+                        "&d" + Text.escape(player.name()),
+                        List.of("&7In quarantine.", "&7Ends: &f" + (player.untilMillis() == 0 ? "when staff release"
+                                : "in " + io.github.intruder_tech.blackdoor.enforcement.BanBook
+                                        .words(player.untilMillis() - now)), "", "&eClick to release"),
+                        s -> {
+                            if (mayEdit(s)) {
+                                engine.release(player.name(), s.viewer().name());
+                                s.refresh();
+                            }
+                        }));
+            }
+            items.add(new MenuItem(27, Icon.INFO, "&fHeld now: " + held.size(),
+                    List.of("&7Hold someone yourself:", "&f/blackdoor quarantine <player>"), null));
+            items.add(new MenuItem(31, Icon.BACK, "&7Back", List.of(), s -> s.show(punishments())));
+            return new Menu("Black Door - Quarantine", 4, items);
+        };
+    }
+
+    private static String quarantineLength(int minutes) {
+        return minutes == 0 ? "until released"
+                : io.github.intruder_tech.blackdoor.enforcement.BanBook.words(minutes * 60_000L);
     }
 
     private MenuItem botFloodItem(int slot) {

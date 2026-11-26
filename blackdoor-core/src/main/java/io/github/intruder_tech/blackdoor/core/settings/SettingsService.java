@@ -32,6 +32,7 @@ public final class SettingsService {
     public static final String ADAPTIVE_MODE = "network.adaptive";
     public static final String ENFORCEMENT_MODE = "enforcement.mode";
     public static final String BAN_LENGTH = "enforcement.ban-minutes";
+    public static final String QUARANTINE_LENGTH = "enforcement.quarantine-minutes";
 
     /** One editable setting. Options are the exact values written to the file. */
     public record Setting(String id, String label, String description, ConfigFileSpec<?> spec, String path,
@@ -68,6 +69,8 @@ public final class SettingsService {
                 options(io.github.intruder_tech.blackdoor.enforcement.EnforcementSettings.Mode.values())));
         all.add(new Setting(BAN_LENGTH, "Temporary ban", "Bans players who keep getting kicked.",
                 CoreConfig.ENFORCEMENT, "ban-minutes", List.of("0", "15", "60", "1440")));
+        all.add(new Setting(QUARANTINE_LENGTH, "Quarantine length", "How long a suspect is held.",
+                CoreConfig.ENFORCEMENT, "quarantine-minutes", List.of("15", "60", "1440", "0")));
         this.settings = List.copyOf(all);
     }
 
@@ -98,6 +101,9 @@ public final class SettingsService {
         }
         if (setting.id().equals(BAN_LENGTH)) {
             return Integer.toString(engine.enforcementSettings().banMinutes());
+        }
+        if (setting.id().equals(QUARANTINE_LENGTH)) {
+            return Integer.toString(engine.enforcementSettings().quarantineMinutes());
         }
         if (setting.id().equals(AUTH_ENABLED)) {
             return Boolean.toString(engine.authSettings().enabled());

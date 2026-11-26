@@ -31,6 +31,9 @@
 
 ### Current implementation gaps (connection protection and exploit guards)
 
+- Quarantine stops what the server reports as events. A held player can still move (including with
+  movement cheats, which are not detected), chat, and be seen. Another plugin that acts without
+  those events is not stopped. There are no setbacks, and no statistical checks.
 - There is no movement detection. The physics work was closed by the owner on 2026-11-26 before it
   was usable: prediction is height only and runs only in tests. Before it could judge a live player
   it would still need horizontal movement, fluids and climbing; server changes (effects, velocity, abilities, blocks) applied when the client

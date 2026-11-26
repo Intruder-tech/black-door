@@ -51,7 +51,8 @@ public final class EnforcementPolicy {
         if (current.mode() == EnforcementSettings.Mode.DISABLED || id == null || !sure) {
             return Optional.empty();
         }
-        boolean kick = current.mode() == EnforcementSettings.Mode.KICK;
+        // "kick" here means act on the player: kick or quarantine, as the mode says.
+        boolean kick = current.mode() != EnforcementSettings.Mode.WATCH;
         Deque<Finding> seen = players.computeIfAbsent(id, key -> new ArrayDeque<>());
         seen.addLast(finding);
         long oldest = finding.timeMillis() - current.windowSeconds() * 1000L;

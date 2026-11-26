@@ -72,7 +72,8 @@ public final class CasesCommand implements Subcommand {
 
     private String summary(CaseBook.Case c) {
         String what = switch (c.action()) {
-            case WOULD_KICK -> "would be kicked";
+            case WOULD_KICK -> "would be acted on";
+            case QUARANTINE -> "quarantined";
             case KICK -> "kicked";
             case BAN -> "banned";
         };

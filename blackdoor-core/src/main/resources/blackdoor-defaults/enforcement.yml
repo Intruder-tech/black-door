@@ -3,9 +3,10 @@
 # Do not edit config-version; Black Door uses it to migrate this file safely.
 config-version: 1
 
-# disabled: nobody is kicked.
-# watch:    nobody is kicked; the log says who would have been.
-# kick:     the player is kicked.
+# disabled:   nothing happens.
+# watch:      nothing happens; the log says who would have been acted on.
+# quarantine: the player stays, but can only move and chat, and takes no damage.
+# kick:       the player is kicked.
 # Only checks set to Block (with Protection ON) can lead to a kick. Guess-based checks such as
 # spam detection never do. Players with the permission blackdoor.exempt.kick are never kicked.
 mode: disabled
@@ -13,6 +14,9 @@ mode: disabled
 # This many blocked actions within window-seconds triggers the kick.
 findings-to-kick: 5
 window-seconds: 60
+
+# How long quarantine lasts; 0 means until staff release. /blackdoor quarantine
+quarantine-minutes: 60
 
 # Temporary bans, only while mode is kick. A player kicked ban-after-kicks times within
 # kick-memory-hours is refused for ban-minutes. 0 minutes switches temporary bans off.

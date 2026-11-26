@@ -46,6 +46,7 @@ final class MenuItems {
         put(Icon.TEMP_BAN, "IRON_BARS", "IRON_FENCE");
         put(Icon.BANNED_PLAYER, "NAME_TAG");
         put(Icon.CASES, "BOOKSHELF");
+        put(Icon.QUARANTINE, "COBWEB", "WEB");
         put(Icon.CASE_WATCH, "PAPER");
         put(Icon.CASE_KICK, "BOOK");
         put(Icon.CASE_BAN, "WRITABLE_BOOK", "BOOK_AND_QUILL");

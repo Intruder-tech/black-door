@@ -168,6 +168,14 @@ show them (`blackdoor.command.cases`). `/blackdoor cases <n> false|real` or a cl
 verdict (command: `blackdoor.command.bans`; GUI: `blackdoor.gui.edit`). "False alarm" on a kick or
 ban also drops that player's ban and kick count.
 
+**Quarantine:** `mode: quarantine` holds a player instead of kicking them; `quarantine-minutes` (60,
+0 = until staff release). A held player can move, look and chat only: no building, breaking,
+fighting, containers, items or commands. They take no damage and lose no hunger. It survives rejoin
+and restart. `/blackdoor quarantine`, `/blackdoor quarantine <player>`, `/blackdoor quarantine
+release <player>` (`blackdoor.command.quarantine`) and the GUI page "Quarantine". A false alarm
+verdict on a case releases the player. `blackdoor.exempt.kick` also exempts from quarantine. The
+GUI item is now called "Auto action".
+
 ## 3. Profiles (intent)
 
 | Profile | Intent |

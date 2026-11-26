@@ -98,13 +98,13 @@ class MenuTest {
         assertThat(s.shown.itemAt(31).orElseThrow().name()).contains("Punishments");
         s.click(31);
         assertThat(s.shown.title()).isEqualTo("Black Door - Punishments");
-        assertThat(s.shown.itemAt(11).orElseThrow().name()).contains("Auto kick").contains("Off");
-        assertThat(s.shown.itemAt(15).orElseThrow().name()).contains("Temporary ban").contains("Off");
-        s.click(11);
-        AwaitMessages.await(admin, m -> m.contains("Auto kick is now Watch"));
+        assertThat(s.shown.itemAt(10).orElseThrow().name()).contains("Auto action").contains("Off");
+        assertThat(s.shown.itemAt(14).orElseThrow().name()).contains("Temporary ban").contains("Off");
+        s.click(10);
+        AwaitMessages.await(admin, m -> m.contains("Auto action is now Watch"));
         assertThat(engine.enforcementSettings().mode())
                 .isEqualTo(io.github.intruder_tech.blackdoor.enforcement.EnforcementSettings.Mode.WATCH);
-        s.click(15);
+        s.click(14);
         AwaitMessages.await(admin, m -> m.contains("Temporary ban is now 15 minutes"));
         assertThat(engine.enforcementSettings().banMinutes()).isEqualTo(15);
     }
@@ -115,8 +115,8 @@ class MenuTest {
         cases.open(java.util.UUID.randomUUID(), "Griefer",
                 io.github.intruder_tech.blackdoor.enforcement.CaseBook.Action.KICK, java.util.List.of());
         FakeSession s = new FakeSession(RecordingSender.admin(), engine.menus().punishments());
-        assertThat(s.shown.itemAt(13).orElseThrow().name()).contains("Review cases");
-        s.click(13);
+        assertThat(s.shown.itemAt(12).orElseThrow().name()).contains("Review cases");
+        s.click(12);
         assertThat(s.shown.title()).isEqualTo("Black Door - Cases");
         assertThat(s.shown.itemAt(10).orElseThrow().name()).contains("#1").contains("Griefer");
         s.click(10);
