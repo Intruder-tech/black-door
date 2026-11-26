@@ -11,8 +11,10 @@ import java.net.InetAddress;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.function.BooleanSupplier;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 /**
@@ -54,13 +56,36 @@ public final class ConnectionGuard {
     private final BooleanSupplier forwarded;
     private final Map<InetAddress, Tracked> addresses = new LinkedHashMap<>(64, 0.75f, true);
     private final LongAdder refused = new LongAdder();
+    private final KnownAddresses known;
+    private final long startedAt;
+    private final FloodDetector flood;
+    private final Consumer<Boolean> attackChanged;
+    private final LongAdder floodRefused = new LongAdder();
+    private long floodReportedAt;
+    private boolean floodReported;
 
-    /**
-     * @param forwarded true when a proxy forwards players to this server, so every connection
-     *                  shares the proxy's address and carries forwarding data in the hostname
-     */
+    /** Adaptive mode as seen by staff. */
+    public record AttackStatus(boolean active, int knownAddresses, long refused) {
+    }
+
     public ConnectionGuard(FindingSink sink, TimeSource time, Supplier<NetworkSettings> settings,
                            BooleanSupplier enforcementAllowed, BooleanSupplier forwarded) {
+        this(sink, time, settings, enforcementAllowed, forwarded, started -> {
+        });
+    }
+
+    /**
+     * @param forwarded     true when a proxy forwards players to this server, so every connection
+     *                      shares the proxy's address and carries forwarding data in the hostname
+     * @param attackChanged told true when attack mode starts and false when it ends
+     */
+    public ConnectionGuard(FindingSink sink, TimeSource time, Supplier<NetworkSettings> settings,
+                           BooleanSupplier enforcementAllowed, BooleanSupplier forwarded,
+                           Consumer<Boolean> attackChanged) {
+        this.attackChanged = Objects.requireNonNull(attackChanged, "attackChanged");
+        this.known = new KnownAddresses(time);
+        this.startedAt = time.nanoTime();
+        this.flood = new FloodDetector(time);
         this.sink = Objects.requireNonNull(sink, "sink");
         this.time = Objects.requireNonNull(time, "time");
         this.settings = Objects.requireNonNull(settings, "settings");
@@ -73,7 +98,7 @@ public final class ConnectionGuard {
         if (cfg.mode() == NetworkSettings.Mode.DISABLED) {
             return false;
         }
-        boolean refuse = rate(cfg, address, Kind.CONNECTION, cfg.connections());
+        boolean refuse = rate(cfg, address, Kind.CONNECTION, cfg.connections()).refuse();
         // At handshake the address is still the real TCP peer, even behind a forwarding proxy.
         if (!cfg.allowedProxies().isEmpty() && !cfg.allowedProxies().contains(address.getHostAddress())) {
             refuse |= report(cfg, "network.direct-join", new Subject(null, address.getHostAddress()),
@@ -91,7 +116,7 @@ public final class ConnectionGuard {
         if (cfg.mode() == NetworkSettings.Mode.DISABLED) {
             return false;
         }
-        return count(rate(cfg, address, Kind.PING, cfg.pings()));
+        return count(rate(cfg, address, Kind.PING, cfg.pings()).refuse());
     }
 
     public boolean loginStart(InetAddress address, String name) {
@@ -99,13 +124,90 @@ public final class ConnectionGuard {
         if (cfg.mode() == NetworkSettings.Mode.DISABLED) {
             return false;
         }
-        boolean refuse = rate(cfg, address, Kind.LOGIN, cfg.logins());
+        Rate login = rate(cfg, address, Kind.LOGIN, cfg.logins());
+        boolean refuse = login.refuse();
         if (!validName(name)) {
             refuse |= report(cfg, "network.login-name", new Subject(null, address.getHostAddress()),
                     Confidence.HEURISTIC, "login name of " + (name == null ? 0 : name.length())
                             + " characters or with characters no account uses");
         }
-        return count(refuse);
+        return count(flooding(cfg, address, refuse, login.over()));
+    }
+
+    /** A player is in game; their address counts as known once they have stayed a minute. */
+    public void joined(UUID id, InetAddress address) {
+        known.joined(id, address);
+    }
+
+    public void left(UUID id) {
+        known.left(id, settings.get().maxTrackedAddresses());
+    }
+
+    public AttackStatus attackStatus() {
+        NetworkSettings cfg = settings.get();
+        if (flood.expire(cfg.adaptive())) {
+            attackChanged.accept(false);
+        }
+        return new AttackStatus(adaptiveOn(cfg) && flood.active(), known.size(), floodRefused.sum());
+    }
+
+    /** True while adaptive mode still refuses nothing because Black Door has only just started. */
+    public boolean warmingUp() {
+        return time.nanoTime() - startedAt < settings.get().adaptive().warmupSeconds() * 1_000_000_000L;
+    }
+
+    private static boolean adaptiveOn(NetworkSettings cfg) {
+        return cfg.mode() != NetworkSettings.Mode.DISABLED && cfg.adaptive().mode() != NetworkSettings.Mode.DISABLED;
+    }
+
+    /** Adaptive mode: during a flood, unknown addresses share a small login allowance. */
+    private boolean flooding(NetworkSettings cfg, InetAddress address, boolean alreadyRefused, boolean overOwnLimit) {
+        if (!adaptiveOn(cfg) || forwarded.getAsBoolean() || exempt(cfg, address) || known.isKnown(address)) {
+            return alreadyRefused;
+        }
+        boolean block = cfg.adaptive().mode() == NetworkSettings.Mode.MITIGATE && enforcementAllowed.getAsBoolean()
+                && !warmingUp();
+        if (flood.expire(cfg.adaptive())) {
+            attackChanged.accept(false);
+        }
+        if (flood.record(cfg.adaptive())) {
+            attackChanged.accept(true);
+            sink.accept(new Finding("network.attack-mode", new Subject(null, address.getHostAddress()),
+                    Confidence.HEURISTIC, "more than " + cfg.adaptive().triggerPerSecond()
+                    + " logins per second from unknown addresses", time.currentTimeMillis(), false));
+        }
+        if (alreadyRefused) {
+            return true;
+        }
+        // An address over its own limit never draws on the shared allowance, even while the
+        // per-address limits only watch: one address could otherwise lock out every new player.
+        if (overOwnLimit && flood.active()) {
+            if (block) {
+                floodRefused.increment();
+            }
+            return block;
+        }
+        if (flood.tryAllow()) {
+            return false;
+        }
+        if (reportFloodRefusal()) {
+            sink.accept(new Finding("network.unknown-login", new Subject(null, address.getHostAddress()),
+                    Confidence.HEURISTIC, "unknown address during a login flood", time.currentTimeMillis(), block));
+        }
+        if (block) {
+            floodRefused.increment();
+        }
+        return block;
+    }
+
+    private synchronized boolean reportFloodRefusal() {
+        long now = time.nanoTime();
+        if (floodReported && now - floodReportedAt < REPORT_INTERVAL_NANOS) {
+            return false;
+        }
+        floodReported = true;
+        floodReportedAt = now;
+        return true;
     }
 
     public long refused() {
@@ -131,9 +233,13 @@ public final class ConnectionGuard {
         return refuse;
     }
 
-    private boolean rate(NetworkSettings cfg, InetAddress address, Kind kind, NetworkSettings.Limit limit) {
+    /** Whether the address is over its limit, and whether that limit itself refuses it. */
+    private record Rate(boolean over, boolean refuse) {
+    }
+
+    private Rate rate(NetworkSettings cfg, InetAddress address, Kind kind, NetworkSettings.Limit limit) {
         if (forwarded.getAsBoolean() || exempt(cfg, address)) {
-            return false;
+            return new Rate(false, false);
         }
         int k = kind.ordinal();
         boolean report = false;
@@ -148,7 +254,7 @@ public final class ConnectionGuard {
                 tracked.buckets[k] = new TokenBucket(limit.burst(), limit.perSecond(), time);
             }
             if (tracked.buckets[k].tryAcquire()) {
-                return false;
+                return new Rate(false, false);
             }
             long now = time.nanoTime();
             if (!tracked.reported[k] || now - tracked.reportedAt[k] >= REPORT_INTERVAL_NANOS) {
@@ -158,10 +264,10 @@ public final class ConnectionGuard {
             }
         }
         if (report) {
-            return report(cfg, kind.checkId, new Subject(null, address.getHostAddress()), Confidence.HEURISTIC,
-                    "more than " + limit.burst() + " at once, " + limit.perSecond() + " per second sustained");
+            return new Rate(true, report(cfg, kind.checkId, new Subject(null, address.getHostAddress()), Confidence.HEURISTIC,
+                    "more than " + limit.burst() + " at once, " + limit.perSecond() + " per second sustained"));
         }
-        return mitigating(cfg);
+        return new Rate(true, mitigating(cfg));
     }
 
     private static boolean exempt(NetworkSettings cfg, InetAddress address) {

@@ -13,6 +13,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -109,7 +110,7 @@ class MenuTest {
     @Test
     void statusItemShowsUnreadablePackets() {
         FakeSession s = new FakeSession(RecordingSender.admin(), engine.menus().main());
-        assertThat(s.shown.itemAt(23).orElseThrow().lore()).anyMatch(l -> l.contains("Unreadable packets"));
+        assertThat(s.shown.itemAt(30).orElseThrow().lore()).anyMatch(l -> l.contains("Unreadable packets"));
     }
 
     @Test
@@ -152,7 +153,7 @@ class MenuTest {
     @Test
     void closeButtonCloses() {
         FakeSession s = new FakeSession(RecordingSender.admin(), engine.menus().main());
-        s.click(31);
+        s.click(40);
         assertThat(s.closed).isTrue();
     }
 
@@ -161,8 +162,29 @@ class MenuTest {
         RecordingSender admin = RecordingSender.admin();
         FakeSession s = new FakeSession(admin, engine.menus().main());
         assertThat(engine.authSettings().enabled()).isFalse();
-        s.click(21);
+        s.click(24);
         AwaitMessages.await(admin, m -> m.contains("Login system is now On"));
         assertThat(engine.authSettings().enabled()).isTrue();
+    }
+
+    @Test
+    void statusItemShowsBotFloodModeKnownAddressesAndRefusals() {
+        FakeSession s = new FakeSession(RecordingSender.admin(), engine.menus().main());
+        assertThat(s.shown.itemAt(30).orElseThrow().lore())
+                .anyMatch(l -> l.contains("Bot flood mode") && l.contains("idle"))
+                .anyMatch(l -> l.contains("Known addresses") && l.contains("refused"));
+    }
+
+    @Test
+    void botFloodModeCanBeSwitchedInGameOnAnOlderNetworkFile() throws Exception {
+        Path file = dir.resolve("network.yml");
+        Files.writeString(file, Files.readString(file).replaceAll("(?s)\\nadaptive:.*?calm-seconds: \\d+", ""));
+        assertThat(engine.reloadConfiguration("test").success()).isTrue();
+        RecordingSender admin = RecordingSender.admin();
+        FakeSession s = new FakeSession(admin, engine.menus().main());
+        assertThat(s.shown.itemAt(22).orElseThrow().name()).contains("Bot flood mode").contains("Watch");
+        s.click(22);
+        AwaitMessages.await(admin, m -> m.contains("Bot flood mode is now Block"));
+        assertThat(engine.networkSettings().adaptive().mode().name()).isEqualTo("MITIGATE");
     }
 }

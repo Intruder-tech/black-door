@@ -94,7 +94,20 @@ connections) and `packet.max-sessions` (restart required).
 **`network.yml`** connection protection: `mode`; per-address `connections`, `pings`, `logins`
 (`burst`, `per-second`); `max-hostname-length`; `max-tracked-addresses`;
 `exempt-private-addresses`; `exempt-addresses`. Limit changes apply to addresses not yet tracked.
-Quarantine, adaptive mode and forwarding expectations are not implemented yet.
+Quarantine is not implemented yet.
+
+`network.yml` `adaptive` (login floods from many addresses):
+
+| Key under `adaptive.` | Range | Default | Effect |
+|---|---|---|---|
+| `mode` | `disabled` / `monitor` / `mitigate` | `monitor` | Own switch, also in the GUI as "Bot flood mode". Refusing needs `mitigate` and `mode: enforce` in `config.yml`. Off when the file's top-level `mode` is `disabled`. |
+| `trigger-per-second` | 1–10000 | 10 | Logins per second from unknown addresses, averaged over 10 seconds, that start attack mode |
+| `unknown-per-second` | 1–10000 | 2 | Logins per second unknown addresses share during an attack |
+| `calm-seconds` | 10–3600 | 60 | Time at or below the trigger before attack mode ends |
+| `warmup-seconds` | 0–3600 | 300 | Time after start in which attack mode is noticed but refuses nothing |
+
+An address is known once a player from it has stayed in game for 60 seconds. Exempt addresses,
+and backends behind forwarding, are neither counted nor refused.
 The same file applies on Velocity and BungeeCord; see KNOWN_LIMITATIONS.md for what each proxy
 can refuse.
 

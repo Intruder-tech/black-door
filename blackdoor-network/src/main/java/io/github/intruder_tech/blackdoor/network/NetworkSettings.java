@@ -10,10 +10,27 @@ import java.util.stream.Collectors;
 /** Parsed {@code network.yml}. Immutable. */
 public record NetworkSettings(Mode mode, Limit connections, Limit pings, Limit logins, int maxHostnameLength,
                               int maxTrackedAddresses, Set<String> exemptAddresses, boolean exemptPrivate,
-                              Set<String> allowedProxies) {
+                              Set<String> allowedProxies, Adaptive adaptive) {
 
     /** Same meaning as the packet check modes. */
     public enum Mode { DISABLED, MONITOR, MITIGATE }
+
+    /**
+     * Login-flood handling: above {@code triggerPerSecond} logins from unknown addresses, they
+     * share {@code unknownPerSecond} until the rate has been low for {@code calmSeconds}. Nothing is
+     * refused in the first {@code warmupSeconds} after start, while the known addresses fill up.
+     */
+    public record Adaptive(Mode mode, int triggerPerSecond, int unknownPerSecond, int calmSeconds,
+                           int warmupSeconds) {
+        /** Without a warm-up. */
+        public Adaptive(Mode mode, int triggerPerSecond, int unknownPerSecond, int calmSeconds) {
+            this(mode, triggerPerSecond, unknownPerSecond, calmSeconds, 0);
+        }
+
+        public static Adaptive defaults() {
+            return new Adaptive(Mode.MONITOR, 10, 2, 60, 300);
+        }
+    }
 
     /** Per-address allowance: {@code burst} at once, refilled at {@code perSecond}. */
     public record Limit(int burst, int perSecond) {
@@ -26,6 +43,14 @@ public record NetworkSettings(Mode mode, Limit connections, Limit pings, Limit l
         allowedProxies = Set.copyOf(allowedProxies);
     }
 
+    /** With adaptive mode off. */
+    public NetworkSettings(Mode mode, Limit connections, Limit pings, Limit logins, int maxHostnameLength,
+                           int maxTrackedAddresses, Set<String> exemptAddresses, boolean exemptPrivate,
+                           Set<String> allowedProxies) {
+        this(mode, connections, pings, logins, maxHostnameLength, maxTrackedAddresses, exemptAddresses, exemptPrivate,
+                allowedProxies, new Adaptive(Mode.DISABLED, 10, 2, 60));
+    }
+
     /** Without a proxy allowlist. */
     public NetworkSettings(Mode mode, Limit connections, Limit pings, Limit logins, int maxHostnameLength,
                            int maxTrackedAddresses, Set<String> exemptAddresses, boolean exemptPrivate) {
@@ -36,7 +61,7 @@ public record NetworkSettings(Mode mode, Limit connections, Limit pings, Limit l
     public static NetworkSettings defaults() {
         // Generous on purpose: many players can share one address (NAT, schools, VPNs).
         return new NetworkSettings(Mode.MONITOR, new Limit(30, 3), new Limit(30, 5), new Limit(10, 1), 255, 50_000,
-                Set.of(), true);
+                Set.of(), true, Set.of(), Adaptive.defaults());
     }
 
     public static NetworkSettings parse(ConfigReader r) {
@@ -52,7 +77,17 @@ public record NetworkSettings(Mode mode, Limit connections, Limit pings, Limit l
                 r.getInt("max-tracked-addresses", d.maxTrackedAddresses(), 100, 1_000_000),
                 addresses(exempt),
                 r.getBoolean("exempt-private-addresses", d.exemptPrivate()),
-                addresses(proxies));
+                addresses(proxies),
+                adaptive(r, d.adaptive()));
+    }
+
+    private static Adaptive adaptive(ConfigReader r, Adaptive d) {
+        return new Adaptive(
+                r.getEnum("adaptive.mode", Mode.class, d.mode()),
+                r.getInt("adaptive.trigger-per-second", d.triggerPerSecond(), 1, 10_000),
+                r.getInt("adaptive.unknown-per-second", d.unknownPerSecond(), 1, 10_000),
+                r.getInt("adaptive.calm-seconds", d.calmSeconds(), 10, 3600),
+                r.getInt("adaptive.warmup-seconds", d.warmupSeconds(), 0, 3600));
     }
 
     private static Set<String> addresses(String list) {

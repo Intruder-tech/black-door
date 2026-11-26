@@ -4,6 +4,8 @@ import com.google.inject.Inject;
 import com.velocitypowered.api.command.CommandMeta;
 import com.velocitypowered.api.event.ResultedEvent;
 import com.velocitypowered.api.event.Subscribe;
+import com.velocitypowered.api.event.connection.DisconnectEvent;
+import com.velocitypowered.api.event.connection.PostLoginEvent;
 import com.velocitypowered.api.event.connection.PreLoginEvent;
 import com.velocitypowered.api.event.proxy.ProxyInitializeEvent;
 import com.velocitypowered.api.event.proxy.ProxyPingEvent;
@@ -80,6 +82,28 @@ public final class BlackDoorVelocityPlugin {
         if (gate != null && event.getResult().isAllowed()
                 && gate.ping(address(connection), hostnameLength(connection))) {
             event.setResult(ResultedEvent.GenericResult.denied());
+        }
+    }
+
+    @Subscribe
+    public void onPostLogin(PostLoginEvent event) {
+        BlackDoorEngine current = engine;
+        InetSocketAddress remote = event.getPlayer().getRemoteAddress();
+        if (current != null && remote != null) {
+            current.playerJoined(event.getPlayer().getUniqueId(), remote.getAddress());
+            // Another plugin may already have disconnected them, before we recorded the join.
+            if (!event.getPlayer().isActive()) {
+                current.playerLeft(event.getPlayer().getUniqueId());
+            }
+        }
+    }
+
+    @Subscribe
+    public void onDisconnect(DisconnectEvent event) {
+        BlackDoorEngine current = engine;
+        // A refused second login carries the online player's id; that player has not left.
+        if (current != null && event.getLoginStatus() != DisconnectEvent.LoginStatus.CONFLICTING_LOGIN) {
+            current.playerLeft(event.getPlayer().getUniqueId());
         }
     }
 

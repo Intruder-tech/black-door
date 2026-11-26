@@ -25,7 +25,7 @@ public final class BlackDoorBungeePlugin extends Plugin {
             engine.enable();
             getProxy().getPluginManager().registerCommand(this, new BungeeCommand(engine.commands()));
             engine.proxyGate().ifPresent(gate ->
-                    getProxy().getPluginManager().registerListener(this, new BungeeGuardListener(gate)));
+                    getProxy().getPluginManager().registerListener(this, new BungeeGuardListener(gate, engine)));
         } catch (RuntimeException e) {
             logger.error("Black Door could not start on BungeeCord.", e);
             engine = null;

@@ -118,14 +118,15 @@ public final class BlackDoorMenus {
             String joinMode = settings.current(joins);
             Setting login = settings.find(SettingsService.AUTH_ENABLED).orElseThrow();
             boolean loginOn = engine.authSettings().enabled();
-            items.add(new MenuItem(21, loginOn ? Icon.LOGIN_SYSTEM : Icon.CHECK_DISABLED,
+            items.add(botFloodItem(22));
+            items.add(new MenuItem(24, loginOn ? Icon.LOGIN_SYSTEM : Icon.CHECK_DISABLED,
                     "&fLogin system &8| " + (loginOn ? "&aOn" : "&8Off"),
                     List.of("&7Players must &f/signup &7once and", "&f/signin &7with their password.",
                             "&7Same account and address skip it", "&7for " + engine.authSettings().sessionHours() + " hours.",
                             "", "&eClick to turn " + (loginOn ? "off" : "on")),
                     s -> cycle(s, login, loginOn ? "Login system is now Off"
                             : "Login system is now On (applies from each player's next join)"), false));
-            items.add(new MenuItem(19, joinMode.equals("disabled") ? Icon.CHECK_DISABLED : Icon.JOIN_GUARD,
+            items.add(new MenuItem(20, joinMode.equals("disabled") ? Icon.CHECK_DISABLED : Icon.JOIN_GUARD,
                     "&fJoin flood protection &8| " + modeLabel(joinMode),
                     List.of("&7Limits how fast one address can", "&7join or ping your server.", "",
                             "&7Now: " + modeLabel(joinMode) + " &8- " + modeMeaning(joinMode),
@@ -134,17 +135,49 @@ public final class BlackDoorMenus {
                             "&8Cannot stop large DDoS attacks.", "", "&eClick to change: &8Off > &aWatch &8> &cBlock"),
                     s -> cycle(s, joins, "Join flood protection is now " + plainMode(settings.next(joins))),
                     joinMode.equals("mitigate")));
-            items.add(new MenuItem(23, Icon.STATUS, "&fStatus", statusLore(), null));
-            items.add(new MenuItem(25, Icon.RELOAD, "&fReload settings",
+            items.add(new MenuItem(30, Icon.STATUS, "&fStatus", statusLore(), null));
+            items.add(new MenuItem(32, Icon.RELOAD,"&fReload settings",
                     List.of("&7Use this after editing the config", "&7files by hand.", "", "&eClick to reload"),
                     this::reload));
             if (!engine.settings().setupCompleted()) {
                 items.add(new MenuItem(4, Icon.SETUP, "&eFinish setup first",
                         List.of("&7Type &f/blackdoor setup &7in chat.", "&7It checks your server's safety basics."), null));
             }
-            items.add(new MenuItem(31, Icon.CLOSE, "&cClose", List.of(), MenuSession::close));
-            return new Menu("Black Door", 4, items);
+            items.add(new MenuItem(40, Icon.CLOSE, "&cClose", List.of(), MenuSession::close));
+            return new Menu("Black Door", 5, items);
         };
+    }
+
+    private MenuItem botFloodItem(int slot) {
+        Setting setting = settings.find(SettingsService.ADAPTIVE_MODE).orElseThrow();
+        String mode = settings.current(setting);
+        List<String> lore = new ArrayList<>();
+        lore.add("&7Keeps regular players able to join");
+        lore.add("&7while bots flood the server.");
+        lore.add("");
+        lore.add("&7Now: " + modeLabel(mode) + " &8- " + modeMeaning(mode));
+        engine.connectionGuard().ifPresent(g -> {
+            var attack = g.attackStatus();
+            lore.add("&7Attack right now: " + (attack.active() ? "&cYes" : "&fNo"));
+            lore.add("&7Known addresses: &f" + attack.knownAddresses());
+            if (g.warmingUp()) {
+                lore.add("&6Just started: refuses nothing yet.");
+            }
+        });
+        boolean on = "enforce".equals(settings.current(settings.find(SettingsService.GLOBAL_MODE).orElseThrow()));
+        if (mode.equals("mitigate") && !on) {
+            lore.add("&6Will only block once Protection is ON.");
+        }
+        if (engine.networkSettings().mode()
+                == io.github.intruder_tech.blackdoor.network.NetworkSettings.Mode.DISABLED) {
+            lore.add("&6Inactive: join flood protection is Off.");
+        }
+        lore.add("");
+        lore.add("&eClick to change: &8Off > &aWatch &8> &cBlock");
+        return new MenuItem(slot, mode.equals("disabled") ? Icon.CHECK_DISABLED : Icon.BOT_FLOOD,
+                "&fBot flood mode &8| " + modeLabel(mode), lore,
+                s -> cycle(s, setting, "Bot flood mode is now " + plainMode(settings.next(setting))),
+                mode.equals("mitigate"));
     }
 
     public MenuPage packetChecks() {
@@ -248,6 +281,12 @@ public final class BlackDoorMenus {
             lore.add("&7Actions blocked: &f" + stats.dropped());
             long unreadable = engine.platform().protocol().translationErrors();
             lore.add("&7Unreadable packets: " + (unreadable == 0 ? "&f0" : "&c" + unreadable + " &7(not inspected)"));
+        });
+        engine.connectionGuard().ifPresent(g -> {
+            var attack = g.attackStatus();
+            lore.add("&7Bot flood mode: " + (attack.active() ? "&cACTIVE" : "&fidle")
+                    + (g.warmingUp() ? " &6(warming up)" : ""));
+            lore.add("&7Known addresses: &f" + attack.knownAddresses() + " &8| &f" + attack.refused() + " &7refused");
         });
         for (String reason : engine.degradedReasons()) {
             lore.add("&e! " + Text.escape(reason));

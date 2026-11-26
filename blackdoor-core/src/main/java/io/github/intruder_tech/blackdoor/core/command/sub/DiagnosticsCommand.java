@@ -72,6 +72,12 @@ public final class DiagnosticsCommand implements Subcommand {
             sender.sendMessage(Text.row("Hidden pings", String.format(Locale.ROOT, "&f%,d &7sent", s.transactionsSent()) + sep
                     + String.format(Locale.ROOT, "&f%,d &7answered", s.transactionsAcknowledged())));
         });
+        engine.connectionGuard().ifPresent(g -> {
+            var attack = g.attackStatus();
+            sender.sendMessage(Text.row("Bot flood mode", (attack.active() ? "&cACTIVE" : "&aidle")
+                    + (g.warmingUp() ? " &6warming up" : "") + sep
+                    + "&f" + attack.knownAddresses() + " &7known addresses" + sep + "&f" + attack.refused() + " &7refused"));
+        });
         engine.workerStats().ifPresent(w -> sender.sendMessage(Text.row("Workers", describe(w, sep))));
         engine.audit().ifPresent(a -> sender.sendMessage(Text.row("Audit log", "&f" + a.written() + " &7written" + sep
                 + (a.dropped() == 0 ? "&a0" : "&c" + a.dropped()) + " &7dropped")));

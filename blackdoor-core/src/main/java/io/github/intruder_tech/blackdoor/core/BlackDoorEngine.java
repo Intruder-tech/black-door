@@ -241,7 +241,43 @@ public final class BlackDoorEngine {
 
     private io.github.intruder_tech.blackdoor.network.ConnectionGuard newConnectionGuard(boolean forwarded) {
         return new io.github.intruder_tech.blackdoor.network.ConnectionGuard(ledger, time, this::networkSettings,
-                () -> settings().mode() == GeneralSettings.Mode.ENFORCE, () -> forwarded);
+                () -> settings().mode() == GeneralSettings.Mode.ENFORCE, () -> forwarded, this::attackChanged);
+    }
+
+    private void attackChanged(boolean started) {
+        if (!started) {
+            logger.info("Attack mode ended.");
+        } else if (connectionGuard != null && connectionGuard.warmingUp()) {
+            logger.warn("Attack mode started during the warm-up after start: nothing is refused yet.");
+        } else if (settings().mode() == GeneralSettings.Mode.ENFORCE && networkSettings().adaptive().mode()
+                == io.github.intruder_tech.blackdoor.network.NetworkSettings.Mode.MITIGATE) {
+            logger.warn("Attack mode started: unknown addresses are limited.");
+        } else {
+            logger.warn("Attack mode started (watch only): nothing is refused.");
+        }
+    }
+
+    /** Adapters report players in game, so their addresses become known to adaptive mode. */
+    public void playerJoined(java.util.UUID id, java.net.InetAddress address) {
+        io.github.intruder_tech.blackdoor.network.ConnectionGuard guard = connectionGuard;
+        if (guard != null) {
+            try {
+                guard.joined(id, address);
+            } catch (RuntimeException e) {
+                logger.error("Could not record a joined player", e);
+            }
+        }
+    }
+
+    public void playerLeft(java.util.UUID id) {
+        io.github.intruder_tech.blackdoor.network.ConnectionGuard guard = connectionGuard;
+        if (guard != null) {
+            try {
+                guard.left(id);
+            } catch (RuntimeException e) {
+                logger.error("Could not record a player leaving", e);
+            }
+        }
     }
 
     /** The login system; empty on proxies. */

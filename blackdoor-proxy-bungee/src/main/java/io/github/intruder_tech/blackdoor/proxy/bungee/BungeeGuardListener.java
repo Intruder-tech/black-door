@@ -1,8 +1,11 @@
 package io.github.intruder_tech.blackdoor.proxy.bungee;
 
+import io.github.intruder_tech.blackdoor.core.BlackDoorEngine;
 import io.github.intruder_tech.blackdoor.core.ProxyGate;
 import net.md_5.bungee.api.chat.TextComponent;
 import net.md_5.bungee.api.event.ClientConnectEvent;
+import net.md_5.bungee.api.event.PlayerDisconnectEvent;
+import net.md_5.bungee.api.event.PostLoginEvent;
 import net.md_5.bungee.api.event.PreLoginEvent;
 import net.md_5.bungee.api.plugin.Listener;
 import net.md_5.bungee.event.EventHandler;
@@ -18,9 +21,28 @@ import java.net.SocketAddress;
 public final class BungeeGuardListener implements Listener {
 
     private final ProxyGate gate;
+    private final BlackDoorEngine engine;
 
-    BungeeGuardListener(ProxyGate gate) {
+    BungeeGuardListener(ProxyGate gate, BlackDoorEngine engine) {
         this.gate = gate;
+        this.engine = engine;
+    }
+
+    @EventHandler
+    public void onPostLogin(PostLoginEvent event) {
+        InetAddress address = address(event.getPlayer().getSocketAddress());
+        if (address != null) {
+            engine.playerJoined(event.getPlayer().getUniqueId(), address);
+            // Another plugin may already have disconnected them, before we recorded the join.
+            if (!event.getPlayer().isConnected()) {
+                engine.playerLeft(event.getPlayer().getUniqueId());
+            }
+        }
+    }
+
+    @EventHandler
+    public void onLeave(PlayerDisconnectEvent event) {
+        engine.playerLeft(event.getPlayer().getUniqueId());
     }
 
     @EventHandler

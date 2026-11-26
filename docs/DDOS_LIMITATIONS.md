@@ -19,7 +19,7 @@
 |---|---|---|
 | Connection floods with completed TCP handshakes | Early rate limiting, quick close | Each connection still costs kernel + Netty resources |
 | Server-list ping floods | Ping throttling, cached responses | Same |
-| Login floods / bot joins | Login throttling, quarantine, adaptive mode | Distributed botnets with many residential IPs can stay under per-IP limits; adaptive global limits then also affect legitimate players |
+| Login floods / bot joins | Login throttling, quarantine, adaptive mode | Distributed botnets with many residential IPs can stay under per-IP limits; adaptive mode then also limits legitimate players it has not seen before |
 | Packet floods from joined clients | Per-type and per-byte budgets, disconnect | — |
 | Expensive-packet attacks (crash/lag payloads) | Exploit guards before parsing | Unknown vectors |
 | Repeat offenders | Optional edge agent pushes temporary drops into nftables | Only as good as the kernel's capacity; not upstream |

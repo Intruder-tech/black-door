@@ -29,6 +29,12 @@
   memory estimated and displayed in `/blackdoor network`.
 
 ### 2.3 Adaptive mode
+**Built (2026-11-26):** a fixed trigger on logins from unknown addresses; during an attack,
+addresses that played before get in and the rest share a small allowance
+([design](superpowers/specs/2026-11-26-adaptive-mode-design.md), CONFIGURATION.md).
+The points below are the wider Phase 0 sketch; the baseline, per-prefix limits and extra
+join checks are not built.
+
 - Baseline measured with EWMA over normal operation.
 - When connection rate exceeds baseline × factor (or an absolute threshold), switch to
   **under-attack** mode: tighter per-prefix limits, temporarily require that new IPs pass extra

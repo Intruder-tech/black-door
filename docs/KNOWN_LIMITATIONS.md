@@ -31,6 +31,16 @@
 
 ### Current implementation gaps (connection protection and exploit guards)
 
+- Adaptive mode keeps known addresses in memory only: after a restart everyone is unknown, and a
+  player whose address changed is unknown too. A backend plugin loaded while players are online
+  does not know them until they rejoin.
+- Nothing is refused for `warmup-seconds` after start, so a real attack in that time gets
+  through (per-address limits still apply). A regular who does not reconnect during the warm-up
+  is unknown until they have stayed 60 seconds once.
+- On offline-mode servers a patient bot can stay 60 seconds and become known. With the login
+  system on, a player kicked for not signing in has usually stayed long enough to count.
+- Adaptive mode has no timer: the end of an attack is noticed at the next login or status view.
+- A backend closes a refused connection without a message.
 - `allowed-proxies` compares exact addresses (no ranges) and needs PacketEvents; a firewall is
   still the stronger protection. BungeeGuard-style tokens are not checked.
 - BungeeCord cannot refuse a status ping event, so pings there are limited only by the

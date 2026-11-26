@@ -16,6 +16,7 @@ movement and combat validation is planned.
   messages and packet flooding.
 - **Exploit guards** for oversized mod data, crash books, crash signs and illegal creative items.
 - **Join and ping flood protection** on backend servers, Velocity and BungeeCord.
+- **Bot flood mode:** during a flood of logins, addresses that played before keep getting in.
 - **In-game control panel** (backend servers) with plain names for every check.
 - **Safe by default:** everything starts in watch mode. Something is blocked only when it is set
   to Block *and* global protection is on.

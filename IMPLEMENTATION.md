@@ -351,16 +351,19 @@ that flood mitigation dropped keep-alive replies and disconnected the player. Bo
 cases pass with checks on Watch and again on Block. 230 unit tests.
 **Not verified:** the scripted client on 26.3 (the library stops at 26.1), or a real hacked client.
 
-**Remaining in Phase 4:** bot scoring, quarantine, adaptive mode, anti-xray, edge agent.
+**4.7 adaptive mode:** during a flood of logins from many addresses, addresses that played before
+keep getting in and unknown ones share a small allowance (`network.yml` `adaptive`, GUI "Bot flood
+mode"). Nothing is refused for `warmup-seconds` (300) after start. 246 unit tests. Live check on Paper 1.21.11 (offline mode, loopback source addresses):
+attack mode started, strangers were mostly refused, the known address got in, attack mode ended.
+**Not verified:** a real proxy, a distributed flood from real addresses, or 26.3.
+
+**Remaining in Phase 4:** bot scoring, quarantine, anti-xray, edge agent.
 See docs/KNOWN_LIMITATIONS.md.
 
 ## 11. Next Steps
 
-0. Owner to review the new icons and 4.3, then commit. Play-test 4.1 with a modded client in
-   monitor mode. Next Phase 4 candidate: forwarding validation.
-1. Milestone 2.4a: implement the world view decided in ADR-017 (shared position-keyed collision
-   cache, overlay, simulation radius, memory budget), fed by chunk and block-change packets, plus
-   a collision-shape registry generated from game data.
+0. Owner to review and commit 4.7 (adaptive mode) and check the new GUI layout in game.
+1. Phase 4 candidates, owner's choice: bot scoring and quarantine, anti-xray, edge agent.
 2. Milestone 2.4b: physics core (walk, jump, gravity, friction, collisions, effects, knockback) for
    1.8.8, latest 1.21.x and latest 26.x. Golden traces from real clients are needed (B-5).
 3. GUI refinements: deferred by the owner until the backend is complete.

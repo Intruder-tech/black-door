@@ -43,5 +43,21 @@ exempt-addresses: ""
 # IPv6 addresses must be written in full form.
 allowed-proxies: ""
 
+# Adaptive mode: during a flood of logins from many addresses, addresses that played here
+# before (for at least 60 seconds) keep getting in, and all others share a small allowance.
+# The list of known addresses is kept in memory only and is empty after a restart.
+# disabled = off, monitor = report only, mitigate = refuse (needs config.yml mode "enforce")
+adaptive:
+  mode: monitor
+  # Logins per second from unknown addresses, averaged over 10 seconds, that start attack mode.
+  trigger-per-second: 10
+  # Logins per second still allowed from unknown addresses while attack mode is on.
+  unknown-per-second: 2
+  # Nothing is refused for this long after the server starts, so that regular players can
+  # reconnect and become known again. 0 = no warm-up.
+  warmup-seconds: 300
+  # Attack mode ends after the rate has stayed at or below the trigger for this long.
+  calm-seconds: 60
+
 # Per-address limits are switched off automatically when BungeeCord forwarding is enabled
 # in spigot.yml, because every player then arrives from the proxy's address.
