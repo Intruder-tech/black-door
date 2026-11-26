@@ -18,6 +18,12 @@
 config reload rollback tested; dependency graph check passes; no feature is advertised.
 
 ## Phase 2 — Packet Security, State, Physics Core
+
+> **Closed by the owner on 2026-11-26.** The physics core was not finished: only height is predicted,
+> only in tests, for 26.3. Black Door has no movement detection, and the Phase 3 movement checks that
+> depend on prediction are dropped unless the physics work is reopened. The physics acceptance
+> criteria, validator fuzzing and the per-packet latency benchmark below were not met.
+
 - Packet security engine stages 1–6; `packet.*` deterministic checks (monitor + drop invalid).
 - Player state engine; transaction manager; entity tracker.
 - World view spike (OD-3) with measurements, then implementation.

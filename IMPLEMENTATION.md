@@ -23,9 +23,9 @@ signs, creative items and mod messages).
 |---|---|---|---|---|
 | 0 | Research, feasibility, threat model, architecture | **Done** | 2026-11-26 | 2026-11-26 (owner: "Proceeded with Phase I") |
 | 1 | Core architecture, build, adapters, protocol abstraction, config | **Done** | 2026-11-26 | 2026-11-26 (owner: "approved, proceed with Phase 2") |
-| 2 | Packet inspection, player state, physics | **In progress** (2.1 done) | 2026-11-26 | — |
+| 2 | Packet inspection, player state, physics | **Done** (closed by owner; physics not functional) | 2026-11-26 | 2026-11-26 (owner: "Mark Physics score as completed") |
 | 3 | Combat / movement / inventory / interaction detections | Not started | — | — |
-| 4 | Exploits, app-layer network protection, proxies | **In progress** (4.1, 4.2; §14) | 2026-11-26 | — |
+| 4 | Exploits, app-layer network protection, proxies | **Done** (§14) | 2026-11-26 | — |
 | 5 | Behavior analysis, correlation, enforcement | Not started | — | — |
 | 6 | Storage, administration, telemetry, developer API | Not started | — | — |
 | 7 | Cross-version testing, security audit, optimization | Not started | — | — |
@@ -41,7 +41,7 @@ Status values: Not started · In progress · In review · Blocked · Done.
 | B-2 | Smoke test on real Paper / Spigot / Folia | **Resolved 2026-11-26.** Owner allowed local test servers and accepted the Minecraft EULA for them. | — |
 | B-3 | CI on GitHub | **Resolved 2026-11-26.** Pushed to `github.com/Intruder-tech/black-door` (private). Run #2 is green. | — |
 | B-4 | Real player traffic | **Largely resolved 2026-11-26.** The owner played ~4 minutes on a local Paper 26.3 server with a 26.3 client (creative and survival, mob combat). Result: **7,715 packets inspected, 0 findings, 0 blocked, 0 errors/exceptions in the log**. `/blackdoor setup` and `/blackdoor player` ran in game; the GUI opened, and the global mode was switched to enforce and back via clicks (both audited). config.yml comments survived the edits. Not covered: per-check mode clicks, older/translated clients, Folia with a player, load. | Confirm in chat whether the GUI looked right and that menu items could not be taken. |
-| B-5 | Physics golden traces (milestone 2.4) | Prediction checks must produce zero flags on recordings of legitimate play, which can only come from real clients. | Later: record test sessions on a local server (procedure to be written in milestone 2.4). |
+| B-5 | Physics golden traces (milestone 2.4) | **Closed 2026-11-26** with the physics work; no further recordings needed. | — |
 
 ## 3. Decisions (resolved this session)
 
@@ -242,7 +242,7 @@ onboarding in §9.
 | 2.2 | Transaction manager (Ping/Pong and window confirmation), entity tracker, outbound velocity tracking | **Done 2026-11-26** | Heartbeat every 50 ms with reserved ids (ping: `[MIN_INT, MIN_INT+2^24)`, legacy window confirmation: `[-32768, -16385]`); replies to our own pings are consumed; new check `packet.transaction`; entity tracker (cap 512/player); velocity queue tied to acknowledgement. Live test (owner, 26.3 client, ~7 min): 18,036 packets, **ping 2 ms / jitter 1 ms measured**, 125 entities tracked, 0 findings, 0 errors. Missing `transaction` key auto-inserted into an old `checks.yml`. Effect/attribute tracking moved to 2.4 (needed only by physics). Not covered: legacy window-confirmation path with a real 1.8 client; other plugins using overlapping ping ids. |
 | 2.3 | World-view memory spike (OD-3) with measured heap numbers | **Done 2026-11-26** | Real 26.3 terrain (609 chunks). Measured per player at view distance 10: block copy 9.99 MiB, collision-shape copy 2.45 MiB, shared cache when players are together 0.08 MiB. Content de-duplication saves only 1%. **Decision (ADR-017):** shared, position-keyed collision cache, per-player overlay, simulation radius 3 chunks (≈0.27 MiB/player worst case), memory budget. Build cost 9.1 µs/section. Full report: docs/BENCHMARK_REPORT.md §1 |
 | 2.4a | World view (ADR-017): shared position-keyed collision cache, per-player view and pending-change overlay, memory budget, PacketEvents chunk/block-change translation, coarse collision classifier | **Done 2026-11-26** (live check: 213 chunks, 1.3 of 256 MiB, 1,418 packets, 0 findings) | New module `blackdoor-world`; classes EMPTY/FULL/PARTIAL/FLUID/SPECIAL (PARTIAL/SPECIAL mean "no verdict" until an exact shape registry exists); 1.8-era servers without world names use private per-player namespaces; budget `performance.world-memory-mb` (default 256) |
-| 2.4b | Physics core (walk/jump/gravity/friction/collisions/effects/knockback) for 1.8.8, latest 1.21.x, latest 26.x, exact shape registry, golden-trace harness | **Resumed 2026-11-26** — recorder format 2 done (armed by name, starts at rejoin; captures chunks, keys, ticks, effects, attributes, teleport targets; 247 tests; live join checked on 1.21.11). Block shapes done (table of exact collision boxes built from the running server; 35,723 states on 26.3 match the game data, longest build batch 37 ms; `testdata/block-shapes/26.3.txt.gz`). Traces 101, 102, 104 recorded; walking, water and climbing recordings still needed. Height prediction replay done (`blackdoor-physics`, tests only): zero misses on traces 101, 102 and 104 (3,250 matching ticks; trace 102: all 771 airborne ticks judged; about two thirds of those matches are the player not moving vertically). A review found that the client's ground claim and flying packet were trusted; both are now checked. Live-use gaps are in docs/KNOWN_LIMITATIONS.md. Next: horizontal movement. Earlier: step 1 done: golden-trace recorder (`/blackdoor record <player> [seconds]`, JSON lines in `traces/`, max 300 s / 200k events, audited). Three traces recorded, but they lack terrain, sprint/sneak/key input, effects, attributes and teleport destination, so they cannot test physics. On resume: capture terrain from chunk packets (proposed) and re-record | Needs golden traces from real clients (B-5) |
+| 2.4b | Physics core (walk/jump/gravity/friction/collisions/effects/knockback) for 1.8.8, latest 1.21.x, latest 26.x, exact shape registry, golden-trace harness | **Completed by owner decision 2026-11-26, not functional** (height only, tests only; horizontal movement, fluids, climbing, live wiring and other versions not built). Recorder format 2 done (armed by name, starts at rejoin; captures chunks, keys, ticks, effects, attributes, teleport targets; 247 tests; live join checked on 1.21.11). Block shapes done (table of exact collision boxes built from the running server; 35,723 states on 26.3 match the game data, longest build batch 37 ms; `testdata/block-shapes/26.3.txt.gz`). Traces 101, 102, 104 recorded; walking, water and climbing recordings still needed. Height prediction replay done (`blackdoor-physics`, tests only): zero misses on traces 101, 102 and 104 (3,250 matching ticks; trace 102: all 771 airborne ticks judged; about two thirds of those matches are the player not moving vertically). A review found that the client's ground claim and flying packet were trusted; both are now checked. Live-use gaps are in docs/KNOWN_LIMITATIONS.md. Earlier: step 1 done: golden-trace recorder (`/blackdoor record <player> [seconds]`, JSON lines in `traces/`, max 300 s / 200k events, audited). Three traces recorded, but they lack terrain, sprint/sneak/key input, effects, attributes and teleport destination, so they cannot test physics. On resume: capture terrain from chunk packets (proposed) and re-record | Needs golden traces from real clients (B-5) |
 
 ## 13. Milestone 2.1 — What Was Built and Verified
 
@@ -380,9 +380,8 @@ restart).
 
 ## 11. Next Steps
 
-0. Owner to review and commit 4.7 (adaptive mode) and check the new GUI layout in game.
-1. Phase 4 candidates, owner's choice: bot scoring and quarantine, anti-xray, edge agent.
-2. Milestone 2.4b: physics core (walk, jump, gravity, friction, collisions, effects, knockback) for
-   1.8.8, latest 1.21.x and latest 26.x. Golden traces from real clients are needed (B-5).
+1. Owner picks the next phase. Phase 3 without movement checks (combat, world, inventory) or Phase 5
+   (behaviour analysis, correlation, enforcement, quarantine).
+2. Left over from Phase 2, not done: validator fuzzing and a per-packet latency benchmark.
 3. GUI refinements: deferred by the owner until the backend is complete.
 4. CI upkeep: bump GitHub Actions to Node-24 versions; add a CycloneDX SBOM and a Java 17 runtime job.

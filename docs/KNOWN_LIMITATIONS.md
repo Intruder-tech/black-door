@@ -31,8 +31,9 @@
 
 ### Current implementation gaps (connection protection and exploit guards)
 
-- Movement prediction is height only and runs only in tests. Before it may judge a live player it
-  still needs: server changes (effects, velocity, abilities, blocks) applied when the client
+- There is no movement detection. The physics work was closed by the owner on 2026-11-26 before it
+  was usable: prediction is height only and runs only in tests. Before it could judge a live player
+  it would still need horizontal movement, fluids and climbing; server changes (effects, velocity, abilities, blocks) applied when the client
   acknowledges them; the client's own block placing and breaking; the worn chest item, because a
   claimed elytra flight gets no verdict; and teleport confirmations matched by id.
 - Anti X-ray is Paper's own feature. Black Door reports it and sets `enabled` and `engine-mode`
