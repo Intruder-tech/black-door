@@ -92,14 +92,33 @@ class MenuTest {
     }
 
     @Test
-    void autoKickCyclesFromOffToWatchInTheMainMenu() throws Exception {
+    void punishmentsPageSwitchesAutoKickAndBanLength() throws Exception {
         RecordingSender admin = RecordingSender.admin();
         FakeSession s = new FakeSession(admin, engine.menus().main());
-        assertThat(s.shown.itemAt(31).orElseThrow().name()).contains("Auto kick").contains("Off");
+        assertThat(s.shown.itemAt(31).orElseThrow().name()).contains("Punishments");
         s.click(31);
+        assertThat(s.shown.title()).isEqualTo("Black Door - Punishments");
+        assertThat(s.shown.itemAt(11).orElseThrow().name()).contains("Auto kick").contains("Off");
+        assertThat(s.shown.itemAt(15).orElseThrow().name()).contains("Temporary ban").contains("Off");
+        s.click(11);
         AwaitMessages.await(admin, m -> m.contains("Auto kick is now Watch"));
         assertThat(engine.enforcementSettings().mode())
                 .isEqualTo(io.github.intruder_tech.blackdoor.enforcement.EnforcementSettings.Mode.WATCH);
+        s.click(15);
+        AwaitMessages.await(admin, m -> m.contains("Temporary ban is now 15 minutes"));
+        assertThat(engine.enforcementSettings().banMinutes()).isEqualTo(15);
+    }
+
+    @Test
+    void clickingABannedPlayerLiftsTheBan() {
+        var rules = new io.github.intruder_tech.blackdoor.enforcement.EnforcementSettings(
+                io.github.intruder_tech.blackdoor.enforcement.EnforcementSettings.Mode.KICK, 5, 60, 1, 60, 24);
+        var bans = engine.bans().orElseThrow();
+        bans.recordKick(java.util.UUID.randomUUID(), "Griefer", rules);
+        FakeSession s = new FakeSession(RecordingSender.admin(), engine.menus().punishments());
+        assertThat(s.shown.itemAt(19).orElseThrow().name()).contains("Griefer");
+        s.click(19);
+        assertThat(bans.active()).isEmpty();
     }
 
     @Test

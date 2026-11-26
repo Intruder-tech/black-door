@@ -72,6 +72,7 @@ public final class BlackDoorEngine {
     private volatile ViolationLedger ledger;
     private volatile io.github.intruder_tech.blackdoor.violations.FindingSink findings;
     private static final String KICK_MESSAGE = "Kicked by Black Door: suspicious game client.";
+    private volatile io.github.intruder_tech.blackdoor.enforcement.BanBook bans;
     private volatile SessionRegistry sessions;
     private volatile PacketSecurityEngine packetEngine;
     private static final int SHAPES_PER_TICK = 500;
@@ -112,6 +113,7 @@ public final class BlackDoorEngine {
                 new VersionCommand(this),
                 new ReloadCommand(this),
                 new io.github.intruder_tech.blackdoor.core.command.sub.AuthCommand(this),
+                new io.github.intruder_tech.blackdoor.core.command.sub.BansCommand(this),
                 new DiagnosticsCommand(this)), logger);
         this.api = platform::pluginVersion;
     }
@@ -206,6 +208,13 @@ public final class BlackDoorEngine {
     private void startPacketLayer() {
         ledger = new ViolationLedger(new RateLimitedLogger(logger, time, 3, 1, 256), 10_000, 200);
         findings = enforcingSink(ledger);
+        if (!platform.info().type().isProxy()) {
+            bans = new io.github.intruder_tech.blackdoor.enforcement.BanBook(
+                    platform.dataDirectory().resolve("enforcement").resolve("bans.tsv"), time);
+            if (bans.unreadableLines() > 0) {
+                logger.warn("enforcement/bans.tsv: " + bans.unreadableLines() + " unreadable line(s) ignored.");
+            }
+        }
         if (platform.info().type().isProxy()) {
             // Players connect to a proxy directly, so their addresses are real here.
             connectionGuard = newConnectionGuard(false);
@@ -280,14 +289,74 @@ public final class BlackDoorEngine {
         }
         java.util.UUID id = decision.subject().uniqueId();
         platform.scheduler().runForPlayer(id, () -> {
-            if (platform.kick(id, KICK_MESSAGE)) {
-                logger.warn("Kicked " + name + why + ".");
-                AuditLog currentAudit = audit;
-                if (currentAudit != null) {
-                    currentAudit.record("system", "enforcement.kick " + name, decision.checkId());
-                }
+            var rules = enforcementSettings();
+            var book = bans;
+            boolean ban = book != null && book.nextKickBans(id, rules);
+            if (!platform.kick(id, ban ? banText(java.time.Duration.ofMinutes(rules.banMinutes())) : KICK_MESSAGE)) {
+                return;
+            }
+            logger.warn("Kicked " + name + why + ".");
+            record("system", "enforcement.kick " + name, decision.checkId());
+            if (book == null) {
+                return;
+            }
+            book.recordKick(id, name, rules).ifPresent(b -> {
+                logger.warn("Banned " + name + " for " + rules.banMinutes() + " minutes.");
+                record("system", "enforcement.ban " + name, rules.banMinutes() + " minutes");
+            });
+            saveBans();
+        });
+    }
+
+    private static String banText(java.time.Duration left) {
+        return "Banned by Black Door for " + io.github.intruder_tech.blackdoor.enforcement.BanBook
+                .words(left.toMillis()) + ": suspicious game client.";
+    }
+
+    private void record(String actor, String action, String outcome) {
+        AuditLog currentAudit = audit;
+        if (currentAudit != null) {
+            currentAudit.record(actor, action, outcome);
+        }
+    }
+
+    private void saveBans() {
+        var book = bans;
+        if (book == null) {
+            return;
+        }
+        boolean queued = submitWork(() -> {
+            try {
+                book.save();
+            } catch (java.io.IOException e) {
+                logger.error("Could not save temporary bans; they will be lost on restart.", e);
             }
         });
+        if (!queued) {
+            logger.warn("Too busy to save temporary bans now.");
+        }
+    }
+
+    /** Temporary bans and recent kicks; empty on proxies. */
+    public Optional<io.github.intruder_tech.blackdoor.enforcement.BanBook> bans() {
+        return Optional.ofNullable(bans);
+    }
+
+    /** What to tell a banned player who tries to join; empty if they may join. Thread-safe. */
+    public Optional<String> banMessage(java.util.UUID playerId) {
+        return bans().flatMap(book -> book.active(playerId))
+                .map(b -> banText(java.time.Duration.ofMillis(b.untilMillis() - time.currentTimeMillis())));
+    }
+
+    /** Lifts a temporary ban. Returns false if no running ban has that name. */
+    public boolean unban(String name, String actor) {
+        boolean lifted = bans().map(book -> book.lift(name)).orElse(false);
+        if (lifted) {
+            record(actor, "enforcement.unban " + io.github.intruder_tech.blackdoor.common.text.LogSanitizer
+                    .sanitize(name, 32), "success");
+            saveBans();
+        }
+        return lifted;
     }
 
     /** Where checks report. Null only before {@link #enable()}. */

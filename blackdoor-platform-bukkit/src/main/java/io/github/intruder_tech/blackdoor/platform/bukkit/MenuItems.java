@@ -43,6 +43,8 @@ final class MenuItems {
         put(Icon.LOGIN_SYSTEM, "TRIPWIRE_HOOK");
         put(Icon.BOT_FLOOD, "ZOMBIE_HEAD", "ROTTEN_FLESH");
         put(Icon.AUTO_KICK, "IRON_BOOTS");
+        put(Icon.TEMP_BAN, "IRON_BARS", "IRON_FENCE");
+        put(Icon.BANNED_PLAYER, "NAME_TAG");
         put(Icon.POSITION, "ENDER_PEARL");
         put(Icon.ROTATION, "ENDER_EYE", "EYE_OF_ENDER");
         put(Icon.SLOT, "COPPER_INGOT", "IRON_INGOT");

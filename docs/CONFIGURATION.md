@@ -155,6 +155,12 @@ Protection ON. Spam, oversized mod data, books, creative items and item data are
 count. Permission `blackdoor.exempt.kick` (default nobody) exempts a player. Kicks are audited.
 Backends only.
 
+**Temporary bans:** `ban-after-kicks` (3), `ban-minutes` (0 = off), `kick-memory-hours` (24). GUI
+page "Punishments" switches the length (Off, 15 minutes, 1 hour, 1 day) and unbans by click;
+`/blackdoor bans` and `/blackdoor bans unban <player>` do the same (permission
+`blackdoor.command.bans`). Bans are kept in `enforcement/bans.tsv`, not in the server's ban list,
+survive a restart, and last until they run out or are lifted, even if Auto kick is switched off.
+
 ## 3. Profiles (intent)
 
 | Profile | Intent |

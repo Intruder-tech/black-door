@@ -13,3 +13,10 @@ mode: disabled
 # This many blocked actions within window-seconds triggers the kick.
 findings-to-kick: 5
 window-seconds: 60
+
+# Temporary bans, only while mode is kick. A player kicked ban-after-kicks times within
+# kick-memory-hours is refused for ban-minutes. 0 minutes switches temporary bans off.
+# List or lift them with /blackdoor bans.
+ban-after-kicks: 3
+ban-minutes: 0
+kick-memory-hours: 24

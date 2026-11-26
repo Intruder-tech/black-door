@@ -115,7 +115,10 @@ public final class BlackDoorMenus {
                             "", "&eClick to open"),
                     s -> s.show(packetChecks())));
             items.add(locked(14, Icon.LOCKED_COMBAT, "Combat checks", "Reach, kill aura...", "Phase 3"));
-            items.add(autoKickItem(31));
+            items.add(new MenuItem(31, Icon.AUTO_KICK, "&fPunishments",
+                    List.of("&7Auto kick and temporary bans.", "&7Banned now: &f"
+                            + engine.bans().map(b -> b.active().size()).orElse(0), "", "&eClick to open"),
+                    s -> s.show(punishments())));
             items.add(antiXrayItem(16, session.viewer().hasPermission(SettingsService.EDIT_PERMISSION)));
             Setting joins = settings.find(SettingsService.NETWORK_MODE).orElseThrow();
             String joinMode = settings.current(joins);
@@ -149,6 +152,62 @@ public final class BlackDoorMenus {
             items.add(new MenuItem(40, Icon.CLOSE, "&cClose", List.of(), MenuSession::close));
             return new Menu("Black Door", 5, items);
         };
+    }
+
+    public MenuPage punishments() {
+        return session -> {
+            List<MenuItem> items = new ArrayList<>();
+            items.add(autoKickItem(11));
+            items.add(banLengthItem(15));
+            var banned = engine.bans().map(b -> b.active()).orElse(List.of());
+            long now = engine.time().currentTimeMillis();
+            for (int i = 0; i < Math.min(7, banned.size()); i++) {
+                var ban = banned.get(i);
+                items.add(new MenuItem(19 + i, Icon.BANNED_PLAYER, "&c" + Text.escape(ban.name()),
+                        List.of("&7Banned by Black Door.", "&7Time left: &f"
+                                        + io.github.intruder_tech.blackdoor.enforcement.BanBook
+                                        .words(ban.untilMillis() - now), "", "&eClick to unban"),
+                        s -> unban(s, ban.name())));
+            }
+            items.add(new MenuItem(27, Icon.INFO, "&fBanned now: " + banned.size(),
+                    List.of("&7Up to 7 are shown here. All of them:", "&f/blackdoor bans"), null));
+            items.add(new MenuItem(31, Icon.BACK, "&7Back", List.of(), s -> s.show(main())));
+            return new Menu("Black Door - Punishments", 4, items);
+        };
+    }
+
+    private void unban(MenuSession session, String name) {
+        if (!mayEdit(session)) {
+            return;
+        }
+        if (engine.unban(name, session.viewer().name())) {
+            session.viewer().sendMessage(Text.PREFIX + "&aUnbanned " + Text.escape(name) + ".");
+        }
+        session.refresh();
+    }
+
+    private MenuItem banLengthItem(int slot) {
+        Setting setting = settings.find(SettingsService.BAN_LENGTH).orElseThrow();
+        var rules = engine.enforcementSettings();
+        boolean on = rules.banMinutes() > 0;
+        List<String> lore = new ArrayList<>();
+        lore.add("&7Bans for a while after &f" + rules.banAfterKicks() + " &7auto kicks");
+        lore.add("&7within &f" + rules.kickMemoryHours() + " &7hours.");
+        lore.add("");
+        lore.add("&7Now: " + (on ? "&c" : "&8") + banLength(rules.banMinutes()));
+        if (on && rules.mode() != io.github.intruder_tech.blackdoor.enforcement.EnforcementSettings.Mode.KICK) {
+            lore.add("&6Only bans while Auto kick is on Kick.");
+        }
+        lore.add("");
+        lore.add("&eClick to change: &8Off > 15 minutes > 1 hour > 1 day");
+        String next = banLength(Integer.parseInt(settings.next(setting)));
+        return new MenuItem(slot, on ? Icon.TEMP_BAN : Icon.CHECK_DISABLED,
+                "&fTemporary ban &8| " + (on ? "&c" : "&8") + banLength(rules.banMinutes()), lore,
+                s -> cycle(s, setting, "Temporary ban is now " + next), on);
+    }
+
+    private static String banLength(int minutes) {
+        return minutes == 0 ? "Off" : io.github.intruder_tech.blackdoor.enforcement.BanBook.words(minutes * 60_000L);
     }
 
     private MenuItem autoKickItem(int slot) {

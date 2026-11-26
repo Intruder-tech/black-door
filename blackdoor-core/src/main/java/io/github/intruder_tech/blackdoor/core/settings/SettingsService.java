@@ -31,6 +31,7 @@ public final class SettingsService {
     public static final String AUTH_ENABLED = "auth.enabled";
     public static final String ADAPTIVE_MODE = "network.adaptive";
     public static final String ENFORCEMENT_MODE = "enforcement.mode";
+    public static final String BAN_LENGTH = "enforcement.ban-minutes";
 
     /** One editable setting. Options are the exact values written to the file. */
     public record Setting(String id, String label, String description, ConfigFileSpec<?> spec, String path,
@@ -65,6 +66,8 @@ public final class SettingsService {
         all.add(new Setting(ENFORCEMENT_MODE, "Auto kick", "Kicks players who keep getting blocked.",
                 CoreConfig.ENFORCEMENT, "mode",
                 options(io.github.intruder_tech.blackdoor.enforcement.EnforcementSettings.Mode.values())));
+        all.add(new Setting(BAN_LENGTH, "Temporary ban", "Bans players who keep getting kicked.",
+                CoreConfig.ENFORCEMENT, "ban-minutes", List.of("0", "15", "60", "1440")));
         this.settings = List.copyOf(all);
     }
 
@@ -92,6 +95,9 @@ public final class SettingsService {
         }
         if (setting.id().equals(ENFORCEMENT_MODE)) {
             return value(engine.enforcementSettings().mode());
+        }
+        if (setting.id().equals(BAN_LENGTH)) {
+            return Integer.toString(engine.enforcementSettings().banMinutes());
         }
         if (setting.id().equals(AUTH_ENABLED)) {
             return Boolean.toString(engine.authSettings().enabled());

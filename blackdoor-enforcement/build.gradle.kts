@@ -8,4 +8,5 @@ dependencies {
     api(project(":blackdoor-common"))
     api(project(":blackdoor-config"))
     api(project(":blackdoor-violations"))
+    testImplementation(testFixtures(project(":blackdoor-common")))
 }

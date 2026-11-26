@@ -9,9 +9,11 @@
 **Phase status:** Phase 4 complete (§14). Phase 2 closed by the owner: **physics (2.4b) marked
 completed by owner decision although it is not functional** (height only, tests only, no movement
 detection). Phase 5: **5.1 auto kick built** (branch `feat/phase-5`, module `blackdoor-enforcement`,
-`enforcement.yml`, GUI item, off by default; unit tests only, not tried on a running server). Not
-built: temporary bans, quarantine, saved evidence, staff review. No statistical checks are planned
-while nothing would feed them.
+`enforcement.yml`, GUI item, off by default). **5.2 temporary bans built** (branch
+`feat/temp-bans`: `enforcement/bans.tsv`, GUI "Punishments" page, `/blackdoor bans`, off by
+default). Both have unit tests only; no kick or ban has happened on a running server. Not built:
+quarantine, saved evidence, staff review. No statistical checks are planned while nothing would
+feed them.
 **Protections active:** 14 packet checks and join/ping flood protection, **monitor mode by default**
 (they log findings; they block only if set to `mitigate` and the global mode is `enforce`).
 **Next gate:** Owner tries auto kick on the test server.
@@ -381,7 +383,7 @@ restart).
 
 ## 11. Next Steps
 
-1. Phase 5: try auto kick live, then temporary bans, then saved evidence and staff review.
+1. Phase 5: try auto kick and temporary bans live, then saved evidence and staff review.
 2. Left over from Phase 2, not done: validator fuzzing and a per-packet latency benchmark.
 3. GUI refinements: deferred by the owner until the backend is complete.
 4. CI upkeep: bump GitHub Actions to Node-24 versions; add a CycloneDX SBOM and a Java 17 runtime job.

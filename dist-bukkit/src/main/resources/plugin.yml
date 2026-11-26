@@ -23,6 +23,9 @@ permissions:
   blackdoor.exempt.kick:
     description: Never kicked automatically by Black Door
     default: false
+  blackdoor.command.bans:
+    description: List or lift temporary bans (/blackdoor bans)
+    default: op
   blackdoor.command.auth:
     description: Reset a forgotten password (/blackdoor auth reset)
     default: op

@@ -64,6 +64,27 @@ class EnforcementWiringTest {
     }
 
     @Test
+    void repeatedKicksBanForAWhileAndStaffCanLiftIt() {
+        set("mode", "kick");
+        set("ban-after-kicks", "2");
+        set("ban-minutes", "15");
+        blockedFindings(5);
+        assertThat(engine.banMessage(id)).isEmpty();
+        blockedFindings(5);
+        assertThat(platform.kicked).last().asString().contains("Banned by Black Door for 15 minutes");
+        assertThat(engine.banMessage(id)).hasValueSatisfying(m -> assertThat(m).contains("15 minutes"));
+
+        io.github.intruder_tech.blackdoor.core.command.RecordingSender staff =
+                new io.github.intruder_tech.blackdoor.core.command.RecordingSender("Mod",
+                        java.util.Set.of("blackdoor.command.bans"));
+        engine.commands().dispatch(staff, new String[]{"bans"});
+        assertThat(staff.all()).contains("tester").contains("15 minutes");
+        engine.commands().dispatch(staff, new String[]{"bans", "unban", "TESTER"});
+        assertThat(staff.all()).contains("Unbanned");
+        assertThat(engine.banMessage(id)).isEmpty();
+    }
+
+    @Test
     void watchModeOnlyLogs() {
         set("mode", "watch");
         blockedFindings(5);

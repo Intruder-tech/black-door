@@ -19,6 +19,13 @@ public final class PresenceListener implements Listener {
         this.engine = engine;
     }
 
+    /** Turns away players under a temporary ban. */
+    @EventHandler(priority = EventPriority.LOW)
+    public void onPreLogin(org.bukkit.event.player.AsyncPlayerPreLoginEvent event) {
+        engine.banMessage(event.getUniqueId()).ifPresent(message -> event.disallow(
+                org.bukkit.event.player.AsyncPlayerPreLoginEvent.Result.KICK_BANNED, message));
+    }
+
     @EventHandler(priority = EventPriority.MONITOR)
     public void onJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
