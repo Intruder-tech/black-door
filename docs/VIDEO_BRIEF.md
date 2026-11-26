@@ -145,6 +145,13 @@ Black Door spots messages a normal game would not send.
 **2. Join and ping flood protection.** Limits how fast one IP address can connect, ping the server
 list and log in. Works on backend servers, Velocity and BungeeCord.
 
+**3. Optional login system** (backend servers, off by default). Switch it on with the "Login
+system" item in the control panel. New players type `/signup <password> <password>`; returning
+players type `/signin <password>`. For 24 hours after typing the password, the same account from
+the same IP address rejoins without it. Until signed in, a player cannot move, chat or build.
+Staff reset a forgotten password with `/blackdoor auth reset <player>`. Never show a real
+password on screen.
+
 **Not available yet** (shown as "coming soon" or not shown at all): movement and combat checks,
 anti X-ray / ESP, bot scoring, automatic punishments such as bans, a menu on proxies.
 

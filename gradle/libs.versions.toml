@@ -6,6 +6,7 @@ paper-api = "1.20.1-R0.1-SNAPSHOT"            # lowest Paper API with region sch
 velocity-api = "4.3.1"                        # Java 25 bytecode
 bungeecord-api = "1.21-R0.3"
 packetevents = "2.14.0"                       # GPL-3.0; knows versions up to 26.3
+log4j = "2.25.3"                              # provided by the server
 # Shaded runtime dependencies
 snakeyaml = "2.7"
 # Test
@@ -21,6 +22,7 @@ velocity-api = { module = "com.velocitypowered:velocity-api", version.ref = "vel
 bungeecord-api = { module = "net.md-5:bungeecord-api", version.ref = "bungeecord-api" }
 packetevents-api = { module = "com.github.retrooper:packetevents-api", version.ref = "packetevents" }
 snakeyaml = { module = "org.yaml:snakeyaml", version.ref = "snakeyaml" }
+log4j-core = { module = "org.apache.logging.log4j:log4j-core", version.ref = "log4j" }
 junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter" }
 junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }

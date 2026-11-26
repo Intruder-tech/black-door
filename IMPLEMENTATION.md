@@ -328,6 +328,11 @@ enforce answered 29 of 60 pings on both, 1 of 20 logins on Velocity and 0 on Bun
 **Check page icons:** each check now has its own item, Off is gray dye, Block adds a glint (older
 servers use stand-in items). Not yet confirmed in game.
 
+**Login system (owner request, 2026-11-26):** new module `blackdoor-auth`, `/signup`, `/signin`,
+`auth.yml`, GUI toggle, `/blackdoor auth reset` (docs/AUTHENTICATION.md). 208 unit tests pass;
+the server starts with it. **Not verified with a real player:** the join lock, the messages and
+that passwords stay out of the server log.
+
 **Remaining in Phase 4:** forwarding validation, item data
 structure limits, creative game-mode check, bot scoring, quarantine, adaptive mode, anti-xray,
 edge agent. See docs/KNOWN_LIMITATIONS.md.

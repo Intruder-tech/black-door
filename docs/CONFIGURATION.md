@@ -96,6 +96,13 @@ Quarantine, adaptive mode and forwarding expectations are not implemented yet.
 The same file applies on Velocity and BungeeCord; see KNOWN_LIMITATIONS.md for what each proxy
 can refuse.
 
+## 2d. Login system
+
+**`auth.yml`:** `enabled` (false), `session-hours` (24), `login-timeout-seconds` (60),
+`max-attempts` (5), `lockout-minutes` (5), `min-password-length` (8). Permission
+`blackdoor.command.auth` allows `/blackdoor auth reset <player>`. See
+[AUTHENTICATION.md](AUTHENTICATION.md).
+
 ## 3. Profiles (intent)
 
 | Profile | Intent |

@@ -13,7 +13,16 @@ commands:
     description: Black Door administration
     usage: /blackdoor help
     aliases: [bd]
+  signup:
+    description: Create your account (login system)
+    usage: /signup <password> <password>
+  signin:
+    description: Sign in to your account (login system)
+    usage: /signin <password>
 permissions:
+  blackdoor.command.auth:
+    description: Reset a forgotten password (/blackdoor auth reset)
+    default: op
   blackdoor.command.help:
     description: List Black Door commands
     default: op

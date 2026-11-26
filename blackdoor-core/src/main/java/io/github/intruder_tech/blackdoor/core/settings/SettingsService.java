@@ -28,6 +28,7 @@ public final class SettingsService {
     public static final String GLOBAL_MODE = "general.mode";
     public static final String PROFILE = "general.profile";
     public static final String NETWORK_MODE = "network.mode";
+    public static final String AUTH_ENABLED = "auth.enabled";
 
     /** One editable setting. Options are the exact values written to the file. */
     public record Setting(String id, String label, String description, ConfigFileSpec<?> spec, String path,
@@ -54,6 +55,8 @@ public final class SettingsService {
         }
         all.add(new Setting(NETWORK_MODE, "Join flood protection", "Limits joins and pings per address.",
                 CoreConfig.NETWORK, "mode", options(io.github.intruder_tech.blackdoor.network.NetworkSettings.Mode.values())));
+        all.add(new Setting(AUTH_ENABLED, "Login system", "Players must /signup and /signin.",
+                CoreConfig.AUTH, "enabled", List.of("false", "true")));
         this.settings = List.copyOf(all);
     }
 
@@ -75,6 +78,9 @@ public final class SettingsService {
         }
         if (setting.id().equals(NETWORK_MODE)) {
             return value(engine.networkSettings().mode());
+        }
+        if (setting.id().equals(AUTH_ENABLED)) {
+            return Boolean.toString(engine.authSettings().enabled());
         }
         for (PacketCheck check : PacketCheck.values()) {
             if (check.id().equals(setting.id())) {

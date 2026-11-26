@@ -24,6 +24,7 @@ public final class BlackDoorBukkitPlugin extends JavaPlugin {
     private static final String PACKETEVENTS_PLUGIN = "packetevents";
 
     private BlackDoorEngine engine;
+    private AuthListener authListener;
 
     @Override
     public void onEnable() {
@@ -40,6 +41,7 @@ public final class BlackDoorBukkitPlugin extends JavaPlugin {
             engine.enable();
             getServer().getPluginManager().registerEvents(presenter, this);
             registerCommand(scheduler);
+            startLoginSystem(scheduler);
         } catch (RuntimeException e) {
             logger.error("Black Door could not start and will disable itself.", e);
             engine = null;
@@ -47,8 +49,33 @@ public final class BlackDoorBukkitPlugin extends JavaPlugin {
         }
     }
 
+    private void startLoginSystem(PlatformScheduler scheduler) {
+        if (!PasswordLogFilter.install()) {
+            getLogger().warning("Could not filter the server log: passwords typed in /signup and /signin may be "
+                    + "written to it. Set commands.log to false in spigot.yml.");
+        }
+        engine.auth().ifPresent(auth -> {
+            authListener = new AuthListener(engine, auth, scheduler);
+            authListener.start(this);
+        });
+        for (String label : new String[]{"signup", "signin"}) {
+            PluginCommand command = getCommand(label);
+            if (command != null) {
+                // reached only while the login system is off, or from the console
+                command.setExecutor((sender, cmd, alias, args) -> {
+                    sender.sendMessage("The Black Door login system is off.");
+                    return true;
+                });
+            }
+        }
+    }
+
     @Override
     public void onDisable() {
+        if (authListener != null) {
+            authListener.stop();
+            authListener = null;
+        }
         if (engine != null) {
             engine.disable();
             engine = null;

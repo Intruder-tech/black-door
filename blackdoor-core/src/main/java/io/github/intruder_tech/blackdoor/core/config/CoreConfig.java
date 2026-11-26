@@ -18,7 +18,11 @@ public final class CoreConfig {
             new ConfigFileSpec<>("network.yml", 1, "blackdoor-defaults/network.yml", List.of(),
                     io.github.intruder_tech.blackdoor.network.NetworkSettings::parse);
 
-    public static final List<ConfigFileSpec<?>> ALL = List.of(GENERAL, CHECKS, NETWORK);
+    public static final ConfigFileSpec<io.github.intruder_tech.blackdoor.auth.AuthSettings> AUTH =
+            new ConfigFileSpec<>("auth.yml", 1, "blackdoor-defaults/auth.yml", List.of(),
+                    io.github.intruder_tech.blackdoor.auth.AuthSettings::parse);
+
+    public static final List<ConfigFileSpec<?>> ALL = List.of(GENERAL, CHECKS, NETWORK, AUTH);
 
     private CoreConfig() {
     }

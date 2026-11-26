@@ -110,23 +110,32 @@ public final class BlackDoorMenus {
             items.add(locked(16, Icon.LOCKED_XRAY, "Anti X-Ray / ESP", "Hide ores and players from cheaters", "Phase 4"));
             Setting joins = settings.find(SettingsService.NETWORK_MODE).orElseThrow();
             String joinMode = settings.current(joins);
-            items.add(new MenuItem(20, joinMode.equals("disabled") ? Icon.CHECK_DISABLED : Icon.JOIN_GUARD,
+            Setting login = settings.find(SettingsService.AUTH_ENABLED).orElseThrow();
+            boolean loginOn = engine.authSettings().enabled();
+            items.add(new MenuItem(21, loginOn ? Icon.LOGIN_SYSTEM : Icon.CHECK_DISABLED,
+                    "&fLogin system &8| " + (loginOn ? "&aOn" : "&8Off"),
+                    List.of("&7Players must &f/signup &7once and", "&f/signin &7with their password.",
+                            "&7Same account and address skip it", "&7for " + engine.authSettings().sessionHours() + " hours.",
+                            "", "&eClick to turn " + (loginOn ? "off" : "on")),
+                    s -> cycle(s, login, loginOn ? "Login system is now Off"
+                            : "Login system is now On (applies from each player's next join)"), false));
+            items.add(new MenuItem(19, joinMode.equals("disabled") ? Icon.CHECK_DISABLED : Icon.JOIN_GUARD,
                     "&fJoin flood protection &8| " + modeLabel(joinMode),
                     List.of("&7Limits how fast one address can", "&7join or ping your server.", "",
                             "&7Now: " + modeLabel(joinMode) + " &8- " + modeMeaning(joinMode),
                             "&8Cannot stop large DDoS attacks.", "", "&eClick to change: &8Off > &aWatch &8> &cBlock"),
                     s -> cycle(s, joins, "Join flood protection is now " + plainMode(settings.next(joins))),
                     joinMode.equals("mitigate")));
-            items.add(new MenuItem(22, Icon.STATUS, "&fStatus", statusLore(), null));
-            items.add(new MenuItem(24, Icon.RELOAD, "&fReload settings",
+            items.add(new MenuItem(23, Icon.STATUS, "&fStatus", statusLore(), null));
+            items.add(new MenuItem(25, Icon.RELOAD, "&fReload settings",
                     List.of("&7Use this after editing the config", "&7files by hand.", "", "&eClick to reload"),
                     this::reload));
             if (!engine.settings().setupCompleted()) {
                 items.add(new MenuItem(4, Icon.SETUP, "&eFinish setup first",
                         List.of("&7Type &f/blackdoor setup &7in chat.", "&7It checks your server's safety basics."), null));
             }
-            items.add(new MenuItem(26, Icon.CLOSE, "&cClose", List.of(), MenuSession::close));
-            return new Menu("Black Door", 3, items);
+            items.add(new MenuItem(31, Icon.CLOSE, "&cClose", List.of(), MenuSession::close));
+            return new Menu("Black Door", 4, items);
         };
     }
 

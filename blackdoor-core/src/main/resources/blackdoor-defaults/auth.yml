@@ -1,0 +1,22 @@
+# Black Door - login system (/signup and /signin)
+# Documentation: docs/AUTHENTICATION.md
+#
+# Do not edit config-version; Black Door uses it to migrate this file safely.
+config-version: 1
+
+# When true, every player must sign up, then sign in at least once per session window.
+# Players already online when you switch it on are asked the next time they join.
+enabled: false
+
+# Hours after the last password entry during which the same account, from the same address,
+# can rejoin without the password. 0 asks on every join.
+session-hours: 24
+
+# Seconds a player has to sign up or sign in before being kicked.
+login-timeout-seconds: 60
+
+# Wrong passwords allowed before that address is locked out of the account.
+max-attempts: 5
+lockout-minutes: 5
+
+min-password-length: 8

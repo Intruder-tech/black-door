@@ -77,6 +77,7 @@ public final class BlackDoorEngine {
     private volatile io.github.intruder_tech.blackdoor.network.ConnectionGuard connectionGuard;
     private volatile java.util.concurrent.ScheduledExecutorService heartbeat;
     private volatile ProxyGate proxyGate;
+    private volatile io.github.intruder_tech.blackdoor.auth.AuthService auth;
 
     /** How often Black Door pings each player for latency and acknowledgement tracking. */
     static final long TRANSACTION_INTERVAL_MS = 50;
@@ -101,6 +102,7 @@ public final class BlackDoorEngine {
                 new io.github.intruder_tech.blackdoor.core.command.sub.RecordCommand(this),
                 new VersionCommand(this),
                 new ReloadCommand(this),
+                new io.github.intruder_tech.blackdoor.core.command.sub.AuthCommand(this),
                 new DiagnosticsCommand(this)), logger);
         this.api = platform::pluginVersion;
     }
@@ -120,6 +122,11 @@ public final class BlackDoorEngine {
             audit = new AuditLog(platform.dataDirectory().resolve("audit"), workers, time, logger, settings.auditEnabled());
             checkEnvironment(settings);
             startPacketLayer();
+            if (!platform.info().type().isProxy()) {
+                auth = new io.github.intruder_tech.blackdoor.auth.AuthService(platform.dataDirectory().resolve("auth"),
+                        time, this::authSettings, new io.github.intruder_tech.blackdoor.auth.PasswordHasher(
+                                io.github.intruder_tech.blackdoor.auth.PasswordHasher.DEFAULT_ITERATIONS), logger::error);
+            }
             try {
                 BlackDoorProvider.register(api);
             } catch (IllegalStateException e) {
@@ -233,6 +240,15 @@ public final class BlackDoorEngine {
     private io.github.intruder_tech.blackdoor.network.ConnectionGuard newConnectionGuard(boolean forwarded) {
         return new io.github.intruder_tech.blackdoor.network.ConnectionGuard(ledger, time, this::networkSettings,
                 () -> settings().mode() == GeneralSettings.Mode.ENFORCE, () -> forwarded);
+    }
+
+    /** The login system; empty on proxies. */
+    public Optional<io.github.intruder_tech.blackdoor.auth.AuthService> auth() {
+        return Optional.ofNullable(auth);
+    }
+
+    public io.github.intruder_tech.blackdoor.auth.AuthSettings authSettings() {
+        return config.current().get(CoreConfig.AUTH);
     }
 
     /** Join and ping limits for the proxy adapters; empty on backends. */

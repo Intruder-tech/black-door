@@ -87,6 +87,7 @@ public final class StatusCommand implements Subcommand {
         engine.connectionGuard().ifPresent(g -> lines.add(Text.row("Join guard", "&f"
                 + engine.networkSettings().mode().name().toLowerCase(Locale.ROOT) + sep + "&f" + g.trackedAddresses()
                 + " &7addresses" + sep + "&f" + g.refused() + " &7refused")));
+        engine.auth().ifPresent(a -> lines.add(Text.row("Login system", a.enabled() ? "&aOn" : "&8Off")));
         engine.workerStats().ifPresent(w -> lines.add(Text.row("Workers", "&f" + w.queued() + "&7/" + w.queueCapacity()
                 + " queued" + sep + (w.failed() == 0 ? "&a0" : "&c" + w.failed()) + " &7failed")));
         lines.add(Text.row("Coming next", "&8Movement & combat checks (Phase 3)"));

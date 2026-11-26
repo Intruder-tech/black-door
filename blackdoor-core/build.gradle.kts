@@ -11,5 +11,6 @@ dependencies {
     api(project(":blackdoor-protocol"))
     api(project(":blackdoor-packets"))
     api(project(":blackdoor-network"))
+    api(project(":blackdoor-auth"))
     testImplementation(testFixtures(project(":blackdoor-common")))
 }

@@ -1,15 +1,24 @@
 # This is a Gradle generated file for dependency locking.
 # Manual edits can break the build and are not advised.
 # This file is expected to be part of source control.
+biz.aQute.bnd:biz.aQute.bnd.annotation:7.1.0=compileClasspath
 com.google.code.gson:gson:2.3.1=compileClasspath
+com.google.errorprone:error_prone_annotations:2.38.0=compileClasspath
 com.google.guava:guava:18.0=compileClasspath
 com.googlecode.json-simple:json-simple:1.1.1=compileClasspath
 commons-lang:commons-lang:2.6=compileClasspath
 javax.persistence:persistence-api:1.0=compileClasspath
 junit:junit:4.10=compileClasspath
 net.md-5:bungeecord-chat:1.8-SNAPSHOT=compileClasspath
+org.apache.logging.log4j:log4j-api:2.25.3=compileClasspath
+org.apache.logging.log4j:log4j-core:2.25.3=compileClasspath
 org.avaje:ebean:2.8.1=compileClasspath
 org.hamcrest:hamcrest-core:1.1=compileClasspath
+org.jspecify:jspecify:1.0.0=compileClasspath
+org.osgi:org.osgi.annotation.bundle:2.0.0=compileClasspath
+org.osgi:org.osgi.annotation.versioning:1.1.2=compileClasspath
+org.osgi:org.osgi.resource:1.0.0=compileClasspath
+org.osgi:org.osgi.service.serviceloader:1.0.0=compileClasspath
 org.spigotmc:spigot-api:1.8.8-R0.1-SNAPSHOT=compileClasspath
 org.yaml:snakeyaml:1.15=compileClasspath
 empty=annotationProcessor

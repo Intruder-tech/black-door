@@ -19,6 +19,8 @@ movement and combat validation is planned.
 - **In-game control panel** (backend servers) with plain names for every check.
 - **Safe by default:** everything starts in watch mode. Something is blocked only when it is set
   to Block *and* global protection is on.
+- **Login system** (optional, off by default): `/signup` and `/signin` with hashed passwords and
+  a 24-hour same-address session. See [docs/AUTHENTICATION.md](docs/AUTHENTICATION.md).
 - **Audit log** of administrative changes.
 
 ## Not built yet

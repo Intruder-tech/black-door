@@ -40,6 +40,7 @@ final class MenuItems {
         put(Icon.CLOSE, "BARRIER");
         put(Icon.SETUP, "NETHER_STAR");
         put(Icon.JOIN_GUARD, "WARD_ARMOR_TRIM_SMITHING_TEMPLATE", "IRON_DOOR");
+        put(Icon.LOGIN_SYSTEM, "TRIPWIRE_HOOK");
         put(Icon.POSITION, "ENDER_PEARL");
         put(Icon.ROTATION, "ENDER_EYE", "EYE_OF_ENDER");
         put(Icon.SLOT, "COPPER_INGOT", "IRON_INGOT");

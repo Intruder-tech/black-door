@@ -146,7 +146,17 @@ class MenuTest {
     @Test
     void closeButtonCloses() {
         FakeSession s = new FakeSession(RecordingSender.admin(), engine.menus().main());
-        s.click(26);
+        s.click(31);
         assertThat(s.closed).isTrue();
+    }
+
+    @Test
+    void loginSystemCanBeSwitchedOnInGame() throws Exception {
+        RecordingSender admin = RecordingSender.admin();
+        FakeSession s = new FakeSession(admin, engine.menus().main());
+        assertThat(engine.authSettings().enabled()).isFalse();
+        s.click(21);
+        AwaitMessages.await(admin, m -> m.contains("Login system is now On"));
+        assertThat(engine.authSettings().enabled()).isTrue();
     }
 }
